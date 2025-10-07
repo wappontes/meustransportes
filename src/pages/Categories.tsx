@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Category } from "@/types";
 import { Plus, TrendingUp, TrendingDown, Trash2, Edit } from "lucide-react";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const categorySchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(50),
@@ -20,22 +20,45 @@ const categorySchema = z.object({
 const Categories = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [categories, setCategories] = useLocalStorage<Category[]>("categories", []);
+  const { user, loading: authLoading } = useAuth();
+  const [categories, setCategories] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [categoryType, setCategoryType] = useState<"income" | "expense">("income");
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (!currentUser) {
+    if (!authLoading && !user) {
       navigate("/");
-    } else {
-      setUser(JSON.parse(currentUser));
+      return;
     }
-  }, [navigate]);
+    if (user) {
+      fetchCategories();
+    }
+  }, [user, authLoading, navigate]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast({
+        title: "Erro ao carregar categorias",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
@@ -45,27 +68,26 @@ const Categories = () => {
       });
 
       if (editingCategory) {
-        setCategories(categories.map(c => 
-          c.id === editingCategory.id 
-            ? { ...editingCategory, ...data }
-            : c
-        ));
+        const { error } = await supabase
+          .from("categories")
+          .update({ ...data, user_id: user!.id })
+          .eq("id", editingCategory.id);
+
+        if (error) throw error;
         toast({ title: "Categoria atualizada com sucesso!" });
       } else {
-        const newCategory: Category = {
-          id: Date.now().toString(),
-          userId: user.id,
-          name: data.name,
-          type: categoryType,
-          createdAt: new Date().toISOString(),
-        };
-        setCategories([...categories, newCategory]);
+        const { error } = await supabase
+          .from("categories")
+          .insert([{ ...data, type: categoryType, user_id: user!.id }]);
+
+        if (error) throw error;
         toast({ title: "Categoria cadastrada com sucesso!" });
       }
 
       setIsDialogOpen(false);
       setEditingCategory(null);
       e.currentTarget.reset();
+      await fetchCategories();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -73,28 +95,51 @@ const Categories = () => {
           description: error.errors[0].message,
           variant: "destructive",
         });
+      } else {
+        console.error("Error saving category:", error);
+        toast({
+          title: "Erro ao salvar categoria",
+          description: "Tente novamente mais tarde",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const handleDelete = (id: string) => {
-    setCategories(categories.filter(c => c.id !== id));
-    toast({ title: "Categoria removida com sucesso!" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      toast({ title: "Categoria removida com sucesso!" });
+      await fetchCategories();
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast({
+        title: "Erro ao remover categoria",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEdit = (category: Category) => {
+  const handleEdit = (category: any) => {
     setEditingCategory(category);
     setCategoryType(category.type);
     setIsDialogOpen(true);
   };
 
-  if (!user) return null;
+  if (loading || authLoading) {
+    return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
+  }
 
-  const userCategories = categories.filter(c => c.userId === user.id);
-  const incomeCategories = userCategories.filter(c => c.type === "income");
-  const expenseCategories = userCategories.filter(c => c.type === "expense");
+  const incomeCategories = categories.filter(c => c.type === "income");
+  const expenseCategories = categories.filter(c => c.type === "expense");
 
-  const CategoryList = ({ items, type }: { items: Category[], type: "income" | "expense" }) => {
+  const CategoryList = ({ items, type }: { items: any[], type: "income" | "expense" }) => {
     const Icon = type === "income" ? TrendingUp : TrendingDown;
     const color = type === "income" ? "text-success" : "text-destructive";
 
@@ -141,7 +186,7 @@ const Categories = () => {
   };
 
   return (
-    <Layout userName={user.name}>
+    <Layout userName={user?.email || "Usuário"}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

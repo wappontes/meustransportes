@@ -2,20 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Transaction, Vehicle, Category } from "@/types";
 import { Plus, Receipt, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate, formatDateForInput } from "@/lib/dateUtils";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const transactionSchema = z.object({
   vehicleId: z.string().min(1, "Selecione um veículo"),
@@ -28,25 +28,54 @@ const transactionSchema = z.object({
 const Transactions = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>("transactions", []);
-  const [vehicles] = useLocalStorage<Vehicle[]>("vehicles", []);
-  const [categories] = useLocalStorage<Category[]>("categories", []);
+  const { user, loading: authLoading } = useAuth();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<"income" | "expense">("income");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (!currentUser) {
+    if (!authLoading && !user) {
       navigate("/");
-    } else {
-      setUser(JSON.parse(currentUser));
+      return;
     }
-  }, [navigate]);
+    if (user) {
+      fetchData();
+    }
+  }, [user, authLoading, navigate]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const fetchData = async () => {
+    try {
+      const [transactionsRes, vehiclesRes, categoriesRes] = await Promise.all([
+        supabase.from("transactions").select("*").order("date", { ascending: false }),
+        supabase.from("vehicles").select("*"),
+        supabase.from("categories").select("*"),
+      ]);
+
+      if (transactionsRes.error) throw transactionsRes.error;
+      if (vehiclesRes.error) throw vehiclesRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+
+      setTransactions(transactionsRes.data || []);
+      setVehicles(vehiclesRes.data || []);
+      setCategories(categoriesRes.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
@@ -59,22 +88,24 @@ const Transactions = () => {
         date: formData.get("date"),
       });
 
-      const newTransaction: Transaction = {
-        id: Date.now().toString(),
-        userId: user.id,
-        vehicleId: data.vehicleId,
-        categoryId: data.categoryId,
-        amount: data.amount,
-        description: data.description,
-        date: data.date,
-        type: transactionType,
-        createdAt: new Date().toISOString(),
-      };
-      
-      setTransactions([...transactions, newTransaction]);
+      const { error } = await supabase
+        .from("transactions")
+        .insert([{
+          user_id: user!.id,
+          vehicle_id: data.vehicleId,
+          category_id: data.categoryId,
+          amount: data.amount,
+          description: data.description,
+          date: data.date,
+          type: transactionType,
+        }]);
+
+      if (error) throw error;
+
       toast({ title: `${transactionType === "income" ? "Receita" : "Despesa"} registrada com sucesso!` });
       setIsDialogOpen(false);
       e.currentTarget.reset();
+      await fetchData();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -82,37 +113,57 @@ const Transactions = () => {
           description: error.errors[0].message,
           variant: "destructive",
         });
+      } else {
+        console.error("Error saving transaction:", error);
+        toast({
+          title: "Erro ao salvar transação",
+          description: "Tente novamente mais tarde",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const handleDelete = (id: string) => {
-    setTransactions(transactions.filter(t => t.id !== id));
-    toast({ title: "Transação removida com sucesso!" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: "Transação removida com sucesso!" });
+      await fetchData();
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      toast({
+        title: "Erro ao remover transação",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    }
   };
 
-  if (!user) return null;
+  if (loading || authLoading) {
+    return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
+  }
 
-  const userVehicles = vehicles.filter(v => v.userId === user.id);
-  const userCategories = categories.filter(c => c.userId === user.id);
-  
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
   
   const userTransactions = transactions
     .filter(t => {
-      const matchesUser = t.userId === user.id;
-      const matchesVehicle = selectedVehicleId === "all" || t.vehicleId === selectedVehicleId;
+      const matchesVehicle = selectedVehicleId === "all" || t.vehicle_id === selectedVehicleId;
       const matchesMonth = isWithinInterval(parseLocalDate(t.date), { start: monthStart, end: monthEnd });
-      return matchesUser && matchesVehicle && matchesMonth;
+      return matchesVehicle && matchesMonth;
     })
     .sort((a, b) => 
       parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
     );
 
-  const filteredCategories = userCategories.filter(c => c.type === transactionType);
+  const filteredCategories = categories.filter(c => c.type === transactionType);
 
-  // Generate month options (last 12 months)
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const date = subMonths(new Date(), i);
     return {
@@ -122,7 +173,7 @@ const Transactions = () => {
   });
 
   return (
-    <Layout userName={user.name}>
+    <Layout userName={user?.email || "Usuário"}>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -139,7 +190,7 @@ const Transactions = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os veículos</SelectItem>
-                {userVehicles.map(vehicle => (
+                {vehicles.map(vehicle => (
                   <SelectItem key={vehicle.id} value={vehicle.id}>
                     {vehicle.name}
                   </SelectItem>
@@ -209,7 +260,7 @@ const Transactions = () => {
                       <SelectValue placeholder="Selecione o veículo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {userVehicles.map(v => (
+                      {vehicles.map(v => (
                         <SelectItem key={v.id} value={v.id}>{v.name} - {v.plate}</SelectItem>
                       ))}
                     </SelectContent>
@@ -267,8 +318,8 @@ const Transactions = () => {
         ) : (
           <div className="space-y-3">
             {userTransactions.map((transaction) => {
-              const vehicle = userVehicles.find(v => v.id === transaction.vehicleId);
-              const category = userCategories.find(c => c.id === transaction.categoryId);
+              const vehicle = vehicles.find(v => v.id === transaction.vehicle_id);
+              const category = categories.find(c => c.id === transaction.category_id);
               const isIncome = transaction.type === "income";
 
               return (

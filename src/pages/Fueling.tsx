@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Fueling as FuelingType, Vehicle } from "@/types";
-import { Plus, Fuel, Trash2, TrendingUp } from "lucide-react";
+import { Plus, Fuel, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { format } from "date-fns";
 import { parseLocalDate, formatDateForInput } from "@/lib/dateUtils";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const fuelingSchema = z.object({
   vehicleId: z.string().min(1, "Selecione um veículo"),
@@ -27,23 +27,49 @@ const fuelingSchema = z.object({
 const Fueling = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [fuelings, setFuelings] = useLocalStorage<FuelingType[]>("fuelings", []);
-  const [vehicles] = useLocalStorage<Vehicle[]>("vehicles", []);
+  const { user, loading: authLoading } = useAuth();
+  const [fuelings, setFuelings] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (!currentUser) {
+    if (!authLoading && !user) {
       navigate("/");
-    } else {
-      setUser(JSON.parse(currentUser));
+      return;
     }
-  }, [navigate]);
+    if (user) {
+      fetchData();
+    }
+  }, [user, authLoading, navigate]);
+
+  const fetchData = async () => {
+    try {
+      const [fuelingsRes, vehiclesRes] = await Promise.all([
+        supabase.from("fuelings").select("*").order("date", { ascending: false }),
+        supabase.from("vehicles").select("*"),
+      ]);
+
+      if (fuelingsRes.error) throw fuelingsRes.error;
+      if (vehiclesRes.error) throw vehiclesRes.error;
+
+      setFuelings(fuelingsRes.data || []);
+      setVehicles(vehiclesRes.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculateConsumption = (vehicleId: string) => {
-    const vehicleFuelings = userFuelings
-      .filter(f => f.vehicleId === vehicleId)
+    const vehicleFuelings = fuelings
+      .filter(f => f.vehicle_id === vehicleId)
       .sort((a, b) => a.odometer - b.odometer);
 
     if (vehicleFuelings.length < 2) return null;
@@ -60,7 +86,7 @@ const Fueling = () => {
     return totalLiters > 0 ? (totalKm / totalLiters).toFixed(2) : null;
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
@@ -74,22 +100,24 @@ const Fueling = () => {
         date: formData.get("date"),
       });
 
-      const newFueling: FuelingType = {
-        id: Date.now().toString(),
-        userId: user.id,
-        vehicleId: data.vehicleId,
-        liters: data.liters,
-        fuelType: data.fuelType,
-        totalAmount: data.totalAmount,
-        odometer: data.odometer,
-        date: data.date,
-        createdAt: new Date().toISOString(),
-      };
-      
-      setFuelings([...fuelings, newFueling]);
+      const { error } = await supabase
+        .from("fuelings")
+        .insert([{
+          user_id: user!.id,
+          vehicle_id: data.vehicleId,
+          liters: data.liters,
+          fuel_type: data.fuelType,
+          total_amount: data.totalAmount,
+          odometer: data.odometer,
+          date: data.date,
+        }]);
+
+      if (error) throw error;
+
       toast({ title: "Abastecimento registrado com sucesso!" });
       setIsDialogOpen(false);
       e.currentTarget.reset();
+      await fetchData();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -97,24 +125,44 @@ const Fueling = () => {
           description: error.errors[0].message,
           variant: "destructive",
         });
+      } else {
+        console.error("Error saving fueling:", error);
+        toast({
+          title: "Erro ao salvar abastecimento",
+          description: "Tente novamente mais tarde",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const handleDelete = (id: string) => {
-    setFuelings(fuelings.filter(f => f.id !== id));
-    toast({ title: "Abastecimento removido com sucesso!" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("fuelings")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ title: "Abastecimento removido com sucesso!" });
+      await fetchData();
+    } catch (error) {
+      console.error("Error deleting fueling:", error);
+      toast({
+        title: "Erro ao remover abastecimento",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    }
   };
 
-  if (!user) return null;
-
-  const userVehicles = vehicles.filter(v => v.userId === user.id);
-  const userFuelings = fuelings.filter(f => f.userId === user.id).sort((a, b) => 
-    parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
-  );
+  if (loading || authLoading) {
+    return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
+  }
 
   return (
-    <Layout userName={user.name}>
+    <Layout userName={user?.email || "Usuário"}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -143,7 +191,7 @@ const Fueling = () => {
                       <SelectValue placeholder="Selecione o veículo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {userVehicles.map(v => (
+                      {vehicles.map(v => (
                         <SelectItem key={v.id} value={v.id}>{v.name} - {v.plate}</SelectItem>
                       ))}
                     </SelectContent>
@@ -196,9 +244,9 @@ const Fueling = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {userVehicles.map((vehicle) => {
+          {vehicles.map((vehicle) => {
             const consumption = calculateConsumption(vehicle.id);
-            const vehicleFuelingCount = userFuelings.filter(f => f.vehicleId === vehicle.id).length;
+            const vehicleFuelingCount = fuelings.filter(f => f.vehicle_id === vehicle.id).length;
             
             return (
               <Card key={vehicle.id} className="shadow-md">
@@ -232,7 +280,7 @@ const Fueling = () => {
           })}
         </div>
 
-        {userFuelings.length === 0 ? (
+        {fuelings.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Fuel className="w-16 h-16 text-muted-foreground mb-4" />
@@ -244,9 +292,9 @@ const Fueling = () => {
         ) : (
           <div className="space-y-3">
             <h3 className="text-xl font-semibold">Histórico de Abastecimentos</h3>
-            {userFuelings.map((fueling) => {
-              const vehicle = userVehicles.find(v => v.id === fueling.vehicleId);
-              const pricePerLiter = fueling.totalAmount / fueling.liters;
+            {fuelings.map((fueling) => {
+              const vehicle = vehicles.find(v => v.id === fueling.vehicle_id);
+              const pricePerLiter = fueling.total_amount / fueling.liters;
 
               return (
                 <Card key={fueling.id} className="shadow-md">
@@ -260,7 +308,7 @@ const Fueling = () => {
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{vehicle?.name}</h3>
                             <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-sm text-muted-foreground">{fueling.fuelType}</span>
+                            <span className="text-sm text-muted-foreground">{fueling.fuel_type}</span>
                           </div>
                           <div className="flex gap-4 text-sm text-muted-foreground mt-1">
                             <span>{fueling.liters.toFixed(2)}L</span>
@@ -274,7 +322,7 @@ const Fueling = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-lg font-bold text-accent">
-                          R$ {fueling.totalAmount.toFixed(2)}
+                          R$ {fueling.total_amount.toFixed(2)}
                         </span>
                         <Button 
                           variant="ghost" 

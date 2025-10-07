@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Vehicle } from "@/types";
 import { Plus, Car, Trash2, Edit } from "lucide-react";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const vehicleSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100),
@@ -23,21 +23,44 @@ const vehicleSchema = z.object({
 const Vehicles = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [vehicles, setVehicles] = useLocalStorage<Vehicle[]>("vehicles", []);
+  const { user, loading: authLoading } = useAuth();
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (!currentUser) {
+    if (!authLoading && !user) {
       navigate("/");
-    } else {
-      setUser(JSON.parse(currentUser));
+      return;
     }
-  }, [navigate]);
+    if (user) {
+      fetchVehicles();
+    }
+  }, [user, authLoading, navigate]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const fetchVehicles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setVehicles(data || []);
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      toast({
+        title: "Erro ao carregar veículos",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
@@ -51,30 +74,26 @@ const Vehicles = () => {
       });
 
       if (editingVehicle) {
-        setVehicles(vehicles.map(v => 
-          v.id === editingVehicle.id 
-            ? { ...editingVehicle, ...data }
-            : v
-        ));
+        const { error } = await supabase
+          .from("vehicles")
+          .update({ ...data, user_id: user!.id })
+          .eq("id", editingVehicle.id);
+
+        if (error) throw error;
         toast({ title: "Veículo atualizado com sucesso!" });
       } else {
-        const newVehicle: Vehicle = {
-          id: Date.now().toString(),
-          userId: user.id,
-          name: data.name,
-          brand: data.brand,
-          model: data.model,
-          year: data.year,
-          plate: data.plate,
-          createdAt: new Date().toISOString(),
-        };
-        setVehicles([...vehicles, newVehicle]);
+        const { error } = await supabase
+          .from("vehicles")
+          .insert([{ ...data, user_id: user!.id }]);
+
+        if (error) throw error;
         toast({ title: "Veículo cadastrado com sucesso!" });
       }
 
       setIsDialogOpen(false);
       setEditingVehicle(null);
       e.currentTarget.reset();
+      await fetchVehicles();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -82,26 +101,48 @@ const Vehicles = () => {
           description: error.errors[0].message,
           variant: "destructive",
         });
+      } else {
+        console.error("Error saving vehicle:", error);
+        toast({
+          title: "Erro ao salvar veículo",
+          description: "Tente novamente mais tarde",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  const handleDelete = (id: string) => {
-    setVehicles(vehicles.filter(v => v.id !== id));
-    toast({ title: "Veículo removido com sucesso!" });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("vehicles")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      toast({ title: "Veículo removido com sucesso!" });
+      await fetchVehicles();
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+      toast({
+        title: "Erro ao remover veículo",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEdit = (vehicle: Vehicle) => {
+  const handleEdit = (vehicle: any) => {
     setEditingVehicle(vehicle);
     setIsDialogOpen(true);
   };
 
-  if (!user) return null;
-
-  const userVehicles = vehicles.filter(v => v.userId === user.id);
+  if (loading || authLoading) {
+    return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
+  }
 
   return (
-    <Layout userName={user.name}>
+    <Layout userName={user?.email || "Usuário"}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -158,7 +199,7 @@ const Vehicles = () => {
           </Dialog>
         </div>
 
-        {userVehicles.length === 0 ? (
+        {vehicles.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Car className="w-16 h-16 text-muted-foreground mb-4" />
@@ -169,7 +210,7 @@ const Vehicles = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {userVehicles.map((vehicle) => (
+            {vehicles.map((vehicle) => (
               <Card key={vehicle.id} className="shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
