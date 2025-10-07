@@ -1,0 +1,233 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { Category } from "@/types";
+import { Plus, TrendingUp, TrendingDown, Trash2, Edit } from "lucide-react";
+import { z } from "zod";
+
+const categorySchema = z.object({
+  name: z.string().trim().min(1, "Nome é obrigatório").max(50),
+});
+
+const Categories = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [user, setUser] = useState<any>(null);
+  const [categories, setCategories] = useLocalStorage<Category[]>("categories", []);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [categoryType, setCategoryType] = useState<"income" | "expense">("income");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  useEffect(() => {
+    const currentUser = localStorage.getItem("currentUser");
+    if (!currentUser) {
+      navigate("/");
+    } else {
+      setUser(JSON.parse(currentUser));
+    }
+  }, [navigate]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    try {
+      const data = categorySchema.parse({
+        name: formData.get("name"),
+      });
+
+      if (editingCategory) {
+        setCategories(categories.map(c => 
+          c.id === editingCategory.id 
+            ? { ...editingCategory, ...data }
+            : c
+        ));
+        toast({ title: "Categoria atualizada com sucesso!" });
+      } else {
+        const newCategory: Category = {
+          id: Date.now().toString(),
+          userId: user.id,
+          name: data.name,
+          type: categoryType,
+          createdAt: new Date().toISOString(),
+        };
+        setCategories([...categories, newCategory]);
+        toast({ title: "Categoria cadastrada com sucesso!" });
+      }
+
+      setIsDialogOpen(false);
+      setEditingCategory(null);
+      e.currentTarget.reset();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Erro de validação",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    setCategories(categories.filter(c => c.id !== id));
+    toast({ title: "Categoria removida com sucesso!" });
+  };
+
+  const handleEdit = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryType(category.type);
+    setIsDialogOpen(true);
+  };
+
+  if (!user) return null;
+
+  const userCategories = categories.filter(c => c.userId === user.id);
+  const incomeCategories = userCategories.filter(c => c.type === "income");
+  const expenseCategories = userCategories.filter(c => c.type === "expense");
+
+  const CategoryList = ({ items, type }: { items: Category[], type: "income" | "expense" }) => {
+    const Icon = type === "income" ? TrendingUp : TrendingDown;
+    const color = type === "income" ? "text-success" : "text-destructive";
+
+    if (items.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Icon className={`w-16 h-16 ${color} mb-4 opacity-50`} />
+            <p className="text-muted-foreground text-center">
+              Nenhuma categoria cadastrada
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {items.map((category) => (
+          <Card key={category.id} className="shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icon className={`w-5 h-5 ${color}`} />
+                  <CardTitle className="text-base">{category.name}</CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => handleEdit(category)} className="flex-1">
+                  <Edit className="w-3 h-3 mr-1" />
+                  Editar
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(category.id)}>
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <Layout userName={user.name}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Categorias</h2>
+            <p className="text-muted-foreground">Organize receitas e despesas</p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="income" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="income">Receitas</TabsTrigger>
+              <TabsTrigger value="expense">Despesas</TabsTrigger>
+            </TabsList>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) setEditingCategory(null);
+            }}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Categoria
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingCategory ? "Editar" : "Nova"} Categoria</DialogTitle>
+                  <DialogDescription>
+                    {editingCategory ? "Atualize" : "Crie"} uma categoria para organizar suas transações
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome da Categoria</Label>
+                    <Input 
+                      id="name" 
+                      name="name" 
+                      placeholder="Ex: Frete, Manutenção, etc." 
+                      defaultValue={editingCategory?.name}
+                      required 
+                    />
+                  </div>
+                  {!editingCategory && (
+                    <div className="space-y-2">
+                      <Label>Tipo</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={categoryType === "income" ? "default" : "outline"}
+                          onClick={() => setCategoryType("income")}
+                          className="flex-1"
+                        >
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          Receita
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={categoryType === "expense" ? "default" : "outline"}
+                          onClick={() => setCategoryType("expense")}
+                          className="flex-1"
+                        >
+                          <TrendingDown className="w-4 h-4 mr-2" />
+                          Despesa
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full">
+                    {editingCategory ? "Atualizar" : "Criar"} Categoria
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <TabsContent value="income">
+            <CategoryList items={incomeCategories} type="income" />
+          </TabsContent>
+
+          <TabsContent value="expense">
+            <CategoryList items={expenseCategories} type="expense" />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
+  );
+};
+
+export default Categories;
