@@ -13,6 +13,7 @@ import { Fueling as FuelingType, Vehicle } from "@/types";
 import { Plus, Fuel, Trash2, TrendingUp } from "lucide-react";
 import { z } from "zod";
 import { format } from "date-fns";
+import { parseLocalDate, formatDateForInput } from "@/lib/dateUtils";
 
 const fuelingSchema = z.object({
   vehicleId: z.string().min(1, "Selecione um veículo"),
@@ -109,7 +110,7 @@ const Fueling = () => {
 
   const userVehicles = vehicles.filter(v => v.userId === user.id);
   const userFuelings = fuelings.filter(f => f.userId === user.id).sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+    parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
   );
 
   return (
@@ -182,7 +183,7 @@ const Fueling = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="date">Data</Label>
-                    <Input id="date" name="date" type="date" defaultValue={format(new Date(), "yyyy-MM-dd")} required />
+                    <Input id="date" name="date" type="date" defaultValue={formatDateForInput(new Date())} required />
                   </div>
                 </div>
 
@@ -267,7 +268,7 @@ const Fueling = () => {
                             <span>{fueling.odometer.toLocaleString()} km</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(fueling.date), "dd/MM/yyyy")}
+                            {format(parseLocalDate(fueling.date), "dd/MM/yyyy")}
                           </p>
                         </div>
                       </div>

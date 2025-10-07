@@ -7,6 +7,8 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Transaction, Fueling, Vehicle, Category } from "@/types";
 import { TrendingUp, TrendingDown, Fuel, DollarSign } from "lucide-react";
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
@@ -39,7 +41,7 @@ const DashboardNew = () => {
 
   // Calculate monthly totals
   const monthlyTransactions = userTransactions.filter(t => 
-    isWithinInterval(new Date(t.date), { start: monthStart, end: monthEnd })
+    isWithinInterval(parseLocalDate(t.date), { start: monthStart, end: monthEnd })
   );
 
   const monthlyIncome = monthlyTransactions
@@ -85,7 +87,7 @@ const DashboardNew = () => {
 
   // Calculate previous month for comparison
   const prevMonthTransactions = userTransactions.filter(t => {
-    const date = new Date(t.date);
+    const date = parseLocalDate(t.date);
     const prevMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
     const prevMonthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 0);
     return isWithinInterval(date, { start: prevMonthStart, end: prevMonthEnd });
@@ -114,14 +116,14 @@ const DashboardNew = () => {
     const end = endOfMonth(date);
     
     const monthTxs = userTransactions.filter(t => 
-      isWithinInterval(new Date(t.date), { start, end })
+      isWithinInterval(parseLocalDate(t.date), { start, end })
     );
     
     const income = monthTxs.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
     const expenses = monthTxs.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
     
     return {
-      month: format(date, "MMM/yy"),
+      month: format(date, "MMM/yy", { locale: ptBR }),
       receitas: income,
       despesas: expenses,
       resultado: income - expenses
@@ -150,14 +152,23 @@ const DashboardNew = () => {
     }))
     .filter(item => item.value > 0);
 
-  const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--muted))'];
+  const COLORS = [
+    '#3B82F6', // blue
+    '#10B981', // green
+    '#F59E0B', // amber
+    '#EF4444', // red
+    '#8B5CF6', // purple
+    '#EC4899', // pink
+    '#14B8A6', // teal
+    '#F97316', // orange
+  ];
 
   // Generate month options (last 12 months)
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const date = subMonths(new Date(), i);
     return {
       value: date.toISOString(),
-      label: format(date, "MMMM 'de' yyyy")
+      label: format(date, "MMMM 'de' yyyy", { locale: ptBR })
     };
   });
 
@@ -298,7 +309,7 @@ const DashboardNew = () => {
                   <span className="text-muted-foreground">Abastecimentos este mês</span>
                   <span className="text-lg font-semibold">
                     {userFuelings.filter(f => 
-                      isWithinInterval(new Date(f.date), { start: monthStart, end: monthEnd })
+                      isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd })
                     ).length}
                   </span>
                 </div>
@@ -324,13 +335,16 @@ const DashboardNew = () => {
                     className="h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                       <PieChart>
                         <Pie
                           data={expensesByCategory}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent, value }) => {
+                            const val = typeof value === 'number' ? value : 0;
+                            return `${name}\nR$ ${val.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
+                          }}
                           outerRadius={80}
                           fill="hsl(var(--primary))"
                           dataKey="value"
@@ -371,13 +385,16 @@ const DashboardNew = () => {
                     className="h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                       <PieChart>
                         <Pie
                           data={incomeByCategory}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent, value }) => {
+                            const val = typeof value === 'number' ? value : 0;
+                            return `${name}\nR$ ${val.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
+                          }}
                           outerRadius={80}
                           fill="hsl(var(--primary))"
                           dataKey="value"

@@ -14,6 +14,7 @@ import { Transaction, Vehicle, Category } from "@/types";
 import { Plus, Receipt, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { format } from "date-fns";
+import { parseLocalDate, formatDateForInput } from "@/lib/dateUtils";
 
 const transactionSchema = z.object({
   vehicleId: z.string().min(1, "Selecione um veículo"),
@@ -92,7 +93,7 @@ const Transactions = () => {
   const userVehicles = vehicles.filter(v => v.userId === user.id);
   const userCategories = categories.filter(c => c.userId === user.id);
   const userTransactions = transactions.filter(t => t.userId === user.id).sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+    parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
   );
 
   const filteredCategories = userCategories.filter(c => c.type === transactionType);
@@ -179,7 +180,7 @@ const Transactions = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="date">Data</Label>
-                    <Input id="date" name="date" type="date" defaultValue={format(new Date(), "yyyy-MM-dd")} required />
+                    <Input id="date" name="date" type="date" defaultValue={formatDateForInput(new Date())} required />
                   </div>
                 </div>
 
@@ -236,7 +237,7 @@ const Transactions = () => {
                             <p className="text-sm text-muted-foreground">{transaction.description}</p>
                           )}
                           <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(transaction.date), "dd/MM/yyyy")}
+                            {format(parseLocalDate(transaction.date), "dd/MM/yyyy")}
                           </p>
                         </div>
                       </div>
