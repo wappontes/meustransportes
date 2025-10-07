@@ -3,50 +3,77 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Transaction, Fueling, Vehicle, Category } from "@/types";
 import { TrendingUp, TrendingDown, Fuel, DollarSign } from "lucide-react";
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 const DashboardNew = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { user, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
-  const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
-  const [fuelings] = useLocalStorage<Fueling[]>("fuelings", []);
-  const [vehicles] = useLocalStorage<Vehicle[]>("vehicles", []);
-  const [categories] = useLocalStorage<Category[]>("categories", []);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [fuelings, setFuelings] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
-    if (!currentUser) {
+    if (!authLoading && !user) {
       navigate("/");
-    } else {
-      setUser(JSON.parse(currentUser));
+      return;
     }
-  }, [navigate]);
+    if (user) {
+      fetchData();
+    }
+  }, [user, authLoading, navigate]);
 
-  if (!user) return null;
+  const fetchData = async () => {
+    try {
+      const [transactionsRes, fuelingsRes, vehiclesRes, categoriesRes] = await Promise.all([
+        supabase.from("transactions").select("*"),
+        supabase.from("fuelings").select("*"),
+        supabase.from("vehicles").select("*"),
+        supabase.from("categories").select("*"),
+      ]);
+
+      if (transactionsRes.error) throw transactionsRes.error;
+      if (fuelingsRes.error) throw fuelingsRes.error;
+      if (vehiclesRes.error) throw vehiclesRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+
+      setTransactions(transactionsRes.data || []);
+      setFuelings(fuelingsRes.data || []);
+      setVehicles(vehiclesRes.data || []);
+      setCategories(categoriesRes.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || authLoading) {
+    return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
+  }
 
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
 
   const userTransactions = transactions.filter(t => {
-    const matchesUser = t.userId === user.id;
-    const matchesVehicle = selectedVehicleId === "all" || t.vehicleId === selectedVehicleId;
-    return matchesUser && matchesVehicle;
+    const matchesVehicle = selectedVehicleId === "all" || t.vehicle_id === selectedVehicleId;
+    return matchesVehicle;
   });
+  
   const userFuelings = fuelings.filter(f => {
-    const matchesUser = f.userId === user.id;
-    const matchesVehicle = selectedVehicleId === "all" || f.vehicleId === selectedVehicleId;
-    return matchesUser && matchesVehicle;
+    const matchesVehicle = selectedVehicleId === "all" || f.vehicle_id === selectedVehicleId;
+    return matchesVehicle;
   });
-  const userVehicles = vehicles.filter(v => v.userId === user.id);
 
   // Calculate monthly totals
   const monthlyTransactions = userTransactions.filter(t => 
@@ -67,9 +94,9 @@ const DashboardNew = () => {
   const calculateAverageConsumption = () => {
     const consumptions: number[] = [];
 
-    userVehicles.forEach(vehicle => {
+    vehicles.forEach(vehicle => {
       const vehicleFuelings = userFuelings
-        .filter(f => f.vehicleId === vehicle.id)
+        .filter(f => f.vehicle_id === vehicle.id)
         .sort((a, b) => a.odometer - b.odometer);
 
       if (vehicleFuelings.length >= 2) {
@@ -145,7 +172,7 @@ const DashboardNew = () => {
     .map(cat => ({
       name: cat.name,
       value: monthlyTransactions
-        .filter(t => t.type === "expense" && t.categoryId === cat.id)
+        .filter(t => t.type === "expense" && t.category_id === cat.id)
         .reduce((sum, t) => sum + t.amount, 0)
     }))
     .filter(item => item.value > 0);
@@ -156,7 +183,7 @@ const DashboardNew = () => {
     .map(cat => ({
       name: cat.name,
       value: monthlyTransactions
-        .filter(t => t.type === "income" && t.categoryId === cat.id)
+        .filter(t => t.type === "income" && t.category_id === cat.id)
         .reduce((sum, t) => sum + t.amount, 0)
     }))
     .filter(item => item.value > 0);
@@ -182,7 +209,7 @@ const DashboardNew = () => {
   });
 
   return (
-    <Layout userName={user.name}>
+    <Layout userName={user?.email || "Usuário"}>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -199,7 +226,7 @@ const DashboardNew = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os veículos</SelectItem>
-                {userVehicles.map(vehicle => (
+                {vehicles.map(vehicle => (
                   <SelectItem key={vehicle.id} value={vehicle.id}>
                     {vehicle.name}
                   </SelectItem>
@@ -332,7 +359,7 @@ const DashboardNew = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total de Veículos</span>
-                  <span className="text-2xl font-bold text-primary">{userVehicles.length}</span>
+                  <span className="text-2xl font-bold text-primary">{vehicles.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Abastecimentos este mês</span>
@@ -457,14 +484,14 @@ const DashboardNew = () => {
 
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>Dicas</CardTitle>
+            <CardTitle>Dicas para Maximizar Seus Resultados</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• Registre todos os abastecimentos para cálculo preciso de consumo</li>
-              <li>• Categorize suas receitas e despesas para melhor controle</li>
-              <li>• Monitore o consumo médio para identificar problemas mecânicos</li>
-              <li>• Compare os resultados mensais para identificar tendências</li>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
+              <li>Registre todas as transações para ter um controle preciso das finanças</li>
+              <li>Monitore o consumo de combustível regularmente para identificar variações</li>
+              <li>Use as categorias para entender melhor onde seu dinheiro está sendo gasto</li>
+              <li>Revise seus gastos mensalmente e ajuste seu planejamento conforme necessário</li>
             </ul>
           </CardContent>
         </Card>
