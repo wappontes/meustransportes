@@ -2,17 +2,22 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Transaction, Fueling, Vehicle } from "@/types";
+import { Transaction, Fueling, Vehicle, Category } from "@/types";
 import { TrendingUp, TrendingDown, Fuel, DollarSign } from "lucide-react";
-import { startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from "date-fns";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const DashboardNew = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
   const [fuelings] = useLocalStorage<Fueling[]>("fuelings", []);
   const [vehicles] = useLocalStorage<Vehicle[]>("vehicles", []);
+  const [categories] = useLocalStorage<Category[]>("categories", []);
 
   useEffect(() => {
     const currentUser = localStorage.getItem("currentUser");
@@ -25,9 +30,8 @@ const DashboardNew = () => {
 
   if (!user) return null;
 
-  const currentMonth = new Date();
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
 
   const userTransactions = transactions.filter(t => t.userId === user.id);
   const userFuelings = fuelings.filter(f => f.userId === user.id);
@@ -82,8 +86,8 @@ const DashboardNew = () => {
   // Calculate previous month for comparison
   const prevMonthTransactions = userTransactions.filter(t => {
     const date = new Date(t.date);
-    const prevMonthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const prevMonthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0);
+    const prevMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
+    const prevMonthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 0);
     return isWithinInterval(date, { start: prevMonthStart, end: prevMonthEnd });
   });
 
@@ -103,12 +107,83 @@ const DashboardNew = () => {
     ? ((monthlyExpenses - prevMonthExpenses) / prevMonthExpenses * 100).toFixed(1)
     : "0";
 
+  // Generate last 6 months data for trends
+  const last6MonthsData = Array.from({ length: 6 }, (_, i) => {
+    const date = subMonths(new Date(), 5 - i);
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    
+    const monthTxs = userTransactions.filter(t => 
+      isWithinInterval(new Date(t.date), { start, end })
+    );
+    
+    const income = monthTxs.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+    const expenses = monthTxs.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+    
+    return {
+      month: format(date, "MMM/yy"),
+      receitas: income,
+      despesas: expenses,
+      resultado: income - expenses
+    };
+  });
+
+  // Expenses by category for pie chart
+  const expensesByCategory = categories
+    .filter(c => c.type === "expense")
+    .map(cat => ({
+      name: cat.name,
+      value: monthlyTransactions
+        .filter(t => t.type === "expense" && t.categoryId === cat.id)
+        .reduce((sum, t) => sum + t.amount, 0)
+    }))
+    .filter(item => item.value > 0);
+
+  // Income by category for pie chart
+  const incomeByCategory = categories
+    .filter(c => c.type === "income")
+    .map(cat => ({
+      name: cat.name,
+      value: monthlyTransactions
+        .filter(t => t.type === "income" && t.categoryId === cat.id)
+        .reduce((sum, t) => sum + t.amount, 0)
+    }))
+    .filter(item => item.value > 0);
+
+  const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--muted))'];
+
+  // Generate month options (last 12 months)
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const date = subMonths(new Date(), i);
+    return {
+      value: date.toISOString(),
+      label: format(date, "MMMM 'de' yyyy")
+    };
+  });
+
   return (
     <Layout userName={user.name}>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-          <p className="text-muted-foreground">Visão geral do mês atual</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+            <p className="text-muted-foreground">Visão geral financeira</p>
+          </div>
+          <Select
+            value={selectedDate.toISOString()}
+            onValueChange={(value) => setSelectedDate(new Date(value))}
+          >
+            <SelectTrigger className="w-[240px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -184,6 +259,33 @@ const DashboardNew = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="shadow-md">
             <CardHeader>
+              <CardTitle>Evolução Mensal (Últimos 6 Meses)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  receitas: { label: "Receitas", color: "hsl(var(--success))" },
+                  despesas: { label: "Despesas", color: "hsl(var(--destructive))" },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={last6MonthsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="receitas" fill="hsl(var(--success))" name="Receitas" />
+                    <Bar dataKey="despesas" fill="hsl(var(--destructive))" name="Despesas" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
               <CardTitle>Resumo da Frota</CardTitle>
             </CardHeader>
             <CardContent>
@@ -207,21 +309,119 @@ const DashboardNew = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Dicas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• Registre todos os abastecimentos para cálculo preciso de consumo</li>
-                <li>• Categorize suas receitas e despesas para melhor controle</li>
-                <li>• Monitore o consumo médio para identificar problemas mecânicos</li>
-                <li>• Compare os resultados mensais para identificar tendências</li>
-              </ul>
-            </CardContent>
-          </Card>
         </div>
+
+        {(expensesByCategory.length > 0 || incomeByCategory.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {expensesByCategory.length > 0 && (
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle>Despesas por Categoria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer
+                    config={{}}
+                    className="h-[300px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={expensesByCategory}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="hsl(var(--primary))"
+                          dataKey="value"
+                        >
+                          {expensesByCategory.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const value = typeof payload[0].value === 'number' ? payload[0].value : 0;
+                              return (
+                                <div className="bg-background border border-border p-2 rounded shadow-lg">
+                                  <p className="font-semibold">{payload[0].name}</p>
+                                  <p className="text-sm">R$ {value.toFixed(2)}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {incomeByCategory.length > 0 && (
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle>Receitas por Categoria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer
+                    config={{}}
+                    className="h-[300px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={incomeByCategory}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="hsl(var(--primary))"
+                          dataKey="value"
+                        >
+                          {incomeByCategory.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const value = typeof payload[0].value === 'number' ? payload[0].value : 0;
+                              return (
+                                <div className="bg-background border border-border p-2 rounded shadow-lg">
+                                  <p className="font-semibold">{payload[0].name}</p>
+                                  <p className="text-sm">R$ {value.toFixed(2)}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Dicas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>• Registre todos os abastecimentos para cálculo preciso de consumo</li>
+              <li>• Categorize suas receitas e despesas para melhor controle</li>
+              <li>• Monitore o consumo médio para identificar problemas mecânicos</li>
+              <li>• Compare os resultados mensais para identificar tendências</li>
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
