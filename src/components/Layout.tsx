@@ -2,19 +2,20 @@ import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Car, LogOut, LayoutDashboard, Fuel, Receipt, Tags, TrendingUp } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LayoutProps {
   children: ReactNode;
-  userName: string;
+  userName?: string;
 }
 
 const Layout = ({ children, userName }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    navigate("/");
+  const handleLogout = async () => {
+    await signOut();
   };
 
   const navItems = [

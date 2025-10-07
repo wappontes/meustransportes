@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Car } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+});
+
+const signupSchema = z.object({
+  name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+});
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+    });
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/dashboard");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -21,26 +52,41 @@ const Auth = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // Simulate authentication - replace with real auth later
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const user = users.find((u: any) => u.email === email && u.password === password);
+    try {
+      // Validate input
+      loginSchema.parse({ email, password });
 
-    if (user) {
-      localStorage.setItem("currentUser", JSON.stringify({ id: user.id, email: user.email, name: user.name }));
-      toast({
-        title: "Login realizado com sucesso!",
-        description: `Bem-vindo de volta, ${user.name}!`,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      navigate("/dashboard");
-    } else {
-      toast({
-        title: "Erro ao fazer login",
-        description: "Email ou senha incorretos.",
-        variant: "destructive",
-      });
+
+      if (error) {
+        toast({
+          title: "Erro ao fazer login",
+          description: error.message === "Invalid login credentials" 
+            ? "Email ou senha incorretos."
+            : error.message,
+          variant: "destructive",
+        });
+      } else if (data.user) {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: `Bem-vindo de volta!`,
+        });
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Erro de validação",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -52,25 +98,49 @@ const Auth = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // Simulate user registration
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const newUser = {
-      id: Date.now().toString(),
-      name,
-      email,
-      password,
-    };
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-    localStorage.setItem("currentUser", JSON.stringify({ id: newUser.id, email: newUser.email, name: newUser.name }));
+    try {
+      // Validate input
+      signupSchema.parse({ name, email, password });
 
-    toast({
-      title: "Cadastro realizado com sucesso!",
-      description: "Sua conta foi criada. Bem-vindo!",
-    });
+      const redirectUrl = `${window.location.origin}/dashboard`;
 
-    navigate("/dashboard");
-    setIsLoading(false);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: name,
+          },
+        },
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao criar conta",
+          description: error.message === "User already registered" 
+            ? "Este email já está cadastrado."
+            : error.message,
+          variant: "destructive",
+        });
+      } else if (data.user) {
+        toast({
+          title: "Cadastro realizado com sucesso!",
+          description: "Sua conta foi criada. Bem-vindo!",
+        });
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Erro de validação",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
