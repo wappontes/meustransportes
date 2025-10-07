@@ -59,34 +59,34 @@ const DashboardNew = () => {
   };
 
   if (loading || authLoading) {
-    return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
+    return (
+      <Layout userName="...">
+        <div className="p-8">Carregando...</div>
+      </Layout>
+    );
   }
 
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
 
-  const userTransactions = transactions.filter(t => {
+  const userTransactions = transactions.filter((t) => {
     const matchesVehicle = selectedVehicleId === "all" || t.vehicle_id === selectedVehicleId;
     return matchesVehicle;
   });
-  
-  const userFuelings = fuelings.filter(f => {
+
+  const userFuelings = fuelings.filter((f) => {
     const matchesVehicle = selectedVehicleId === "all" || f.vehicle_id === selectedVehicleId;
     return matchesVehicle;
   });
 
   // Calculate monthly totals
-  const monthlyTransactions = userTransactions.filter(t => 
-    isWithinInterval(parseLocalDate(t.date), { start: monthStart, end: monthEnd })
+  const monthlyTransactions = userTransactions.filter((t) =>
+    isWithinInterval(parseLocalDate(t.date), { start: monthStart, end: monthEnd }),
   );
 
-  const monthlyIncome = monthlyTransactions
-    .filter(t => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const monthlyIncome = monthlyTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
 
-  const monthlyExpenses = monthlyTransactions
-    .filter(t => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  const monthlyExpenses = monthlyTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
 
   const monthlyBalance = monthlyIncome - monthlyExpenses;
 
@@ -94,9 +94,9 @@ const DashboardNew = () => {
   const calculateAverageConsumption = () => {
     const consumptions: number[] = [];
 
-    vehicles.forEach(vehicle => {
+    vehicles.forEach((vehicle) => {
       const vehicleFuelings = userFuelings
-        .filter(f => f.vehicle_id === vehicle.id)
+        .filter((f) => f.vehicle_id === vehicle.id)
         .sort((a, b) => a.odometer - b.odometer);
 
       if (vehicleFuelings.length >= 2) {
@@ -122,7 +122,7 @@ const DashboardNew = () => {
   const avgConsumption = calculateAverageConsumption();
 
   // Calculate previous month for comparison
-  const prevMonthTransactions = userTransactions.filter(t => {
+  const prevMonthTransactions = userTransactions.filter((t) => {
     const date = parseLocalDate(t.date);
     const prevMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
     const prevMonthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 0);
@@ -130,73 +130,69 @@ const DashboardNew = () => {
   });
 
   const prevMonthIncome = prevMonthTransactions
-    .filter(t => t.type === "income")
+    .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const prevMonthExpenses = prevMonthTransactions
-    .filter(t => t.type === "expense")
+    .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const incomeChange = prevMonthIncome > 0 
-    ? ((monthlyIncome - prevMonthIncome) / prevMonthIncome * 100).toFixed(1)
-    : "0";
+  const incomeChange =
+    prevMonthIncome > 0 ? (((monthlyIncome - prevMonthIncome) / prevMonthIncome) * 100).toFixed(1) : "0";
 
-  const expensesChange = prevMonthExpenses > 0
-    ? ((monthlyExpenses - prevMonthExpenses) / prevMonthExpenses * 100).toFixed(1)
-    : "0";
+  const expensesChange =
+    prevMonthExpenses > 0 ? (((monthlyExpenses - prevMonthExpenses) / prevMonthExpenses) * 100).toFixed(1) : "0";
 
   // Generate last 6 months data for trends
   const last6MonthsData = Array.from({ length: 6 }, (_, i) => {
     const date = subMonths(new Date(), 5 - i);
     const start = startOfMonth(date);
     const end = endOfMonth(date);
-    
-    const monthTxs = userTransactions.filter(t => 
-      isWithinInterval(parseLocalDate(t.date), { start, end })
-    );
-    
-    const income = monthTxs.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-    const expenses = monthTxs.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
-    
+
+    const monthTxs = userTransactions.filter((t) => isWithinInterval(parseLocalDate(t.date), { start, end }));
+
+    const income = monthTxs.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+    const expenses = monthTxs.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+
     return {
       month: format(date, "MMM/yy", { locale: ptBR }),
       receitas: income,
       despesas: expenses,
-      resultado: income - expenses
+      resultado: income - expenses,
     };
   });
 
   // Expenses by category for pie chart
   const expensesByCategory = categories
-    .filter(c => c.type === "expense")
-    .map(cat => ({
+    .filter((c) => c.type === "expense")
+    .map((cat) => ({
       name: cat.name,
       value: monthlyTransactions
-        .filter(t => t.type === "expense" && t.category_id === cat.id)
-        .reduce((sum, t) => sum + t.amount, 0)
+        .filter((t) => t.type === "expense" && t.category_id === cat.id)
+        .reduce((sum, t) => sum + t.amount, 0),
     }))
-    .filter(item => item.value > 0);
+    .filter((item) => item.value > 0);
 
   // Income by category for pie chart
   const incomeByCategory = categories
-    .filter(c => c.type === "income")
-    .map(cat => ({
+    .filter((c) => c.type === "income")
+    .map((cat) => ({
       name: cat.name,
       value: monthlyTransactions
-        .filter(t => t.type === "income" && t.category_id === cat.id)
-        .reduce((sum, t) => sum + t.amount, 0)
+        .filter((t) => t.type === "income" && t.category_id === cat.id)
+        .reduce((sum, t) => sum + t.amount, 0),
     }))
-    .filter(item => item.value > 0);
+    .filter((item) => item.value > 0);
 
   const COLORS = [
-    '#3B82F6', // blue
-    '#10B981', // green
-    '#F59E0B', // amber
-    '#EF4444', // red
-    '#8B5CF6', // purple
-    '#EC4899', // pink
-    '#14B8A6', // teal
-    '#F97316', // orange
+    "#3B82F6", // blue
+    "#10B981", // green
+    "#F59E0B", // amber
+    "#EF4444", // red
+    "#8B5CF6", // purple
+    "#EC4899", // pink
+    "#14B8A6", // teal
+    "#F97316", // orange
   ];
 
   // Generate month options (last 12 months)
@@ -204,7 +200,7 @@ const DashboardNew = () => {
     const date = subMonths(new Date(), i);
     return {
       value: date.toISOString(),
-      label: format(date, "MMMM 'de' yyyy", { locale: ptBR })
+      label: format(date, "MMMM 'de' yyyy", { locale: ptBR }),
     };
   });
 
@@ -217,33 +213,25 @@ const DashboardNew = () => {
             <p className="text-muted-foreground">Visão geral financeira</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Select
-              value={selectedVehicleId}
-              onValueChange={setSelectedVehicleId}
-            >
+            <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Filtrar por veículo" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os veículos</SelectItem>
-                {vehicles.map(vehicle => (
+                {vehicles.map((vehicle) => (
                   <SelectItem key={vehicle.id} value={vehicle.id}>
                     {vehicle.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={selectedDate.toISOString()}
-              onValueChange={(value) => setSelectedDate(new Date(value))}
-            >
+            <Select value={selectedDate.toISOString()} onValueChange={(value) => setSelectedDate(new Date(value))}>
               <SelectTrigger className="w-[240px]">
-                <SelectValue>
-                  {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
-                </SelectValue>
+                <SelectValue>{format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {monthOptions.map(option => (
+                {monthOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -256,69 +244,55 @@ const DashboardNew = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Receitas do Mês
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Receitas do Mês</CardTitle>
               <TrendingUp className="w-4 h-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-success">
-                R$ {monthlyIncome.toFixed(2)}
-              </div>
+              <div className="text-2xl font-bold text-success">R$ {monthlyIncome.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {Number(incomeChange) >= 0 ? "+" : ""}{incomeChange}% em relação ao mês anterior
+                {Number(incomeChange) >= 0 ? "+" : ""}
+                {incomeChange}% em relação ao mês anterior
               </p>
             </CardContent>
           </Card>
 
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Despesas do Mês
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Despesas do Mês</CardTitle>
               <TrendingDown className="w-4 h-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">
-                R$ {monthlyExpenses.toFixed(2)}
-              </div>
+              <div className="text-2xl font-bold text-destructive">R$ {monthlyExpenses.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {Number(expensesChange) >= 0 ? "+" : ""}{expensesChange}% em relação ao mês anterior
+                {Number(expensesChange) >= 0 ? "+" : ""}
+                {expensesChange}% em relação ao mês anterior
               </p>
             </CardContent>
           </Card>
 
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Resultado Mensal
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Resultado Mensal</CardTitle>
               <DollarSign className={`w-4 h-4 ${monthlyBalance >= 0 ? "text-success" : "text-destructive"}`} />
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${monthlyBalance >= 0 ? "text-success" : "text-destructive"}`}>
                 R$ {monthlyBalance.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Receitas - Despesas
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Receitas - Despesas</p>
             </CardContent>
           </Card>
 
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Média de Consumo
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Média de Consumo</CardTitle>
               <Fuel className="w-4 h-4 text-accent" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-accent">
                 {avgConsumption > 0 ? avgConsumption.toFixed(1) : "0.0"} km/l
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Média geral da frota
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Média geral da frota</p>
             </CardContent>
           </Card>
         </div>
@@ -364,9 +338,11 @@ const DashboardNew = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Abastecimentos este mês</span>
                   <span className="text-lg font-semibold">
-                    {userFuelings.filter(f => 
-                      isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd })
-                    ).length}
+                    {
+                      userFuelings.filter((f) =>
+                        isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd }),
+                      ).length
+                    }
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -386,19 +362,16 @@ const DashboardNew = () => {
                   <CardTitle>Despesas por Categoria</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer
-                    config={{}}
-                    className="h-[300px]"
-                  >
+                  <ChartContainer config={{}} className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                       <PieChart>
+                      <PieChart>
                         <Pie
                           data={expensesByCategory}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
                           label={({ name, percent, value }) => {
-                            const val = typeof value === 'number' ? value : 0;
+                            const val = typeof value === "number" ? value : 0;
                             return `${name}\nR$ ${val.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
                           }}
                           outerRadius={80}
@@ -409,10 +382,10 @@ const DashboardNew = () => {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <ChartTooltip 
+                        <ChartTooltip
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
-                              const value = typeof payload[0].value === 'number' ? payload[0].value : 0;
+                              const value = typeof payload[0].value === "number" ? payload[0].value : 0;
                               return (
                                 <div className="bg-background border border-border p-2 rounded shadow-lg">
                                   <p className="font-semibold">{payload[0].name}</p>
@@ -436,19 +409,16 @@ const DashboardNew = () => {
                   <CardTitle>Receitas por Categoria</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer
-                    config={{}}
-                    className="h-[300px]"
-                  >
+                  <ChartContainer config={{}} className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                       <PieChart>
+                      <PieChart>
                         <Pie
                           data={incomeByCategory}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
                           label={({ name, percent, value }) => {
-                            const val = typeof value === 'number' ? value : 0;
+                            const val = typeof value === "number" ? value : 0;
                             return `${name}\nR$ ${val.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
                           }}
                           outerRadius={80}
@@ -459,10 +429,10 @@ const DashboardNew = () => {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <ChartTooltip 
+                        <ChartTooltip
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
-                              const value = typeof payload[0].value === 'number' ? payload[0].value : 0;
+                              const value = typeof payload[0].value === "number" ? payload[0].value : 0;
                               return (
                                 <div className="bg-background border border-border p-2 rounded shadow-lg">
                                   <p className="font-semibold">{payload[0].name}</p>

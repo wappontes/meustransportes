@@ -28,7 +28,9 @@ const Auth = () => {
 
   useEffect(() => {
     // Check if user is already logged in
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         navigate("/dashboard");
       }
@@ -64,9 +66,7 @@ const Auth = () => {
       if (error) {
         toast({
           title: "Erro ao fazer login",
-          description: error.message === "Invalid login credentials" 
-            ? "Email ou senha incorretos."
-            : error.message,
+          description: error.message === "Invalid login credentials" ? "Email ou senha incorretos." : error.message,
           variant: "destructive",
         });
       } else if (data.user) {
@@ -118,9 +118,7 @@ const Auth = () => {
       if (error) {
         toast({
           title: "Erro ao criar conta",
-          description: error.message === "User already registered" 
-            ? "Este email já está cadastrado."
-            : error.message,
+          description: error.message === "User already registered" ? "Este email já está cadastrado." : error.message,
           variant: "destructive",
         });
       } else if (data.user) {
@@ -151,10 +149,8 @@ const Auth = () => {
             <Car className="w-10 h-10 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold">Gestão Veículos</CardTitle>
-            <CardDescription className="text-base mt-2">
-              Gerencie sua frota com facilidade
-            </CardDescription>
+            <CardTitle className="text-3xl font-bold">Meus Transportes</CardTitle>
+            <CardDescription className="text-base mt-2">Gerencie sua frota com facilidade</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -167,23 +163,11 @@ const Auth = () => {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    name="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
-                  />
+                  <Input id="login-email" name="email" type="email" placeholder="seu@email.com" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Senha</Label>
-                  <Input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                  />
+                  <Input id="login-password" name="password" type="password" placeholder="••••••••" required />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Entrando..." : "Entrar"}
@@ -194,23 +178,11 @@ const Auth = () => {
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nome</Label>
-                  <Input
-                    id="signup-name"
-                    name="name"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    required
-                  />
+                  <Input id="signup-name" name="name" type="text" placeholder="Seu nome completo" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
-                  />
+                  <Input id="signup-email" name="email" type="email" placeholder="seu@email.com" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
