@@ -16,6 +16,7 @@ const DashboardNew = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
   const [transactions] = useLocalStorage<Transaction[]>("transactions", []);
   const [fuelings] = useLocalStorage<Fueling[]>("fuelings", []);
   const [vehicles] = useLocalStorage<Vehicle[]>("vehicles", []);
@@ -35,8 +36,16 @@ const DashboardNew = () => {
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
 
-  const userTransactions = transactions.filter(t => t.userId === user.id);
-  const userFuelings = fuelings.filter(f => f.userId === user.id);
+  const userTransactions = transactions.filter(t => {
+    const matchesUser = t.userId === user.id;
+    const matchesVehicle = selectedVehicleId === "all" || t.vehicleId === selectedVehicleId;
+    return matchesUser && matchesVehicle;
+  });
+  const userFuelings = fuelings.filter(f => {
+    const matchesUser = f.userId === user.id;
+    const matchesVehicle = selectedVehicleId === "all" || f.vehicleId === selectedVehicleId;
+    return matchesUser && matchesVehicle;
+  });
   const userVehicles = vehicles.filter(v => v.userId === user.id);
 
   // Calculate monthly totals
@@ -180,21 +189,41 @@ const DashboardNew = () => {
             <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
             <p className="text-muted-foreground">Visão geral financeira</p>
           </div>
-          <Select
-            value={selectedDate.toISOString()}
-            onValueChange={(value) => setSelectedDate(new Date(value))}
-          >
-            <SelectTrigger className="w-[240px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              value={selectedVehicleId}
+              onValueChange={setSelectedVehicleId}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por veículo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os veículos</SelectItem>
+                {userVehicles.map(vehicle => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={selectedDate.toISOString()}
+              onValueChange={(value) => setSelectedDate(new Date(value))}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue>
+                  {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

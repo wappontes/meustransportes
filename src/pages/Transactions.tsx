@@ -13,7 +13,8 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Transaction, Vehicle, Category } from "@/types";
 import { Plus, Receipt, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { parseLocalDate, formatDateForInput } from "@/lib/dateUtils";
 
 const transactionSchema = z.object({
@@ -33,6 +34,8 @@ const Transactions = () => {
   const [categories] = useLocalStorage<Category[]>("categories", []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [transactionType, setTransactionType] = useState<"income" | "expense">("income");
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
     const currentUser = localStorage.getItem("currentUser");
@@ -92,21 +95,75 @@ const Transactions = () => {
 
   const userVehicles = vehicles.filter(v => v.userId === user.id);
   const userCategories = categories.filter(c => c.userId === user.id);
-  const userTransactions = transactions.filter(t => t.userId === user.id).sort((a, b) => 
-    parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
-  );
+  
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+  
+  const userTransactions = transactions
+    .filter(t => {
+      const matchesUser = t.userId === user.id;
+      const matchesVehicle = selectedVehicleId === "all" || t.vehicleId === selectedVehicleId;
+      const matchesMonth = isWithinInterval(parseLocalDate(t.date), { start: monthStart, end: monthEnd });
+      return matchesUser && matchesVehicle && matchesMonth;
+    })
+    .sort((a, b) => 
+      parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
+    );
 
   const filteredCategories = userCategories.filter(c => c.type === transactionType);
+
+  // Generate month options (last 12 months)
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const date = subMonths(new Date(), i);
+    return {
+      value: date.toISOString(),
+      label: format(date, "MMMM 'de' yyyy", { locale: ptBR })
+    };
+  });
 
   return (
     <Layout userName={user.name}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold text-foreground">Transações</h2>
             <p className="text-muted-foreground">Registre receitas e despesas</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              value={selectedVehicleId}
+              onValueChange={setSelectedVehicleId}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por veículo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os veículos</SelectItem>
+                {userVehicles.map(vehicle => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={selectedDate.toISOString()}
+              onValueChange={(value) => setSelectedDate(new Date(value))}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue>
+                  {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -195,6 +252,7 @@ const Transactions = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {userTransactions.length === 0 ? (
