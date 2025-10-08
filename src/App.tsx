@@ -10,6 +10,8 @@ import Vehicles from "./pages/Vehicles";
 import Categories from "./pages/Categories";
 import Transactions from "./pages/Transactions";
 import Fueling from "./pages/Fueling";
+import Profile from "./pages/Profile";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
           <Route path="/categories" element={<Categories />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/fueling" element={<Fueling />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

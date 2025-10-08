@@ -9,7 +9,7 @@
 5. Execute o SQL (botão RUN no canto inferior direito)
 
 Isso irá criar:
-- Tabela `profiles` (perfis de usuários)
+- Tabela `profiles` (perfis de usuários com nome, email e telefone)
 - Tabela `vehicles` (veículos)
 - Tabela `categories` (categorias)
 - Tabela `transactions` (transações)

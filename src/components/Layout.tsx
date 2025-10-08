@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Car, LogOut, LayoutDashboard, Fuel, Receipt, Tags, TrendingUp } from "lucide-react";
+import { Car, LogOut, LayoutDashboard, Fuel, Receipt, Tags, TrendingUp, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface LayoutProps {
@@ -24,6 +24,7 @@ const Layout = ({ children, userName }: LayoutProps) => {
     { path: "/categories", icon: Tags, label: "Categorias" },
     { path: "/transactions", icon: TrendingUp, label: "Transações" },
     { path: "/fueling", icon: Fuel, label: "Abastecimento" },
+    { path: "/profile", icon: User, label: "Perfil" },
   ];
 
   return (
