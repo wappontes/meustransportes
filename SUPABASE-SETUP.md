@@ -1,5 +1,16 @@
 # Configuração do Supabase
 
+## 🚨 ERRO AO SALVAR DADOS? EXECUTE ISTO PRIMEIRO! 🚨
+
+Se você está tendo o erro **"Key is not present in table profiles"** ao salvar:
+
+1. Acesse o **SQL Editor** no Supabase: https://msmlfjwskkabzfwhurzk.supabase.co/project/_/sql
+2. Copie e execute o conteúdo do arquivo **`fix-missing-profiles.sql`**
+3. Este script cria os perfis faltantes para usuários já registrados
+4. Após executar, tente salvar novamente
+
+---
+
 ## ⚠️ RESET COMPLETO (Recomendado se houver erros)
 
 Se você está enfrentando erros com o banco de dados, use o script de reset:
