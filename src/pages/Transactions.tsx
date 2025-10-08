@@ -23,6 +23,7 @@ const transactionSchema = z.object({
   amount: z.coerce.number().positive("Valor deve ser positivo"),
   description: z.string().trim().max(200, "Descrição muito longa"),
   date: z.string().min(1, "Data é obrigatória"),
+  paymentMethod: z.string().min(1, "Selecione a forma de pagamento"),
 });
 
 const Transactions = () => {
@@ -87,6 +88,7 @@ const Transactions = () => {
         amount: formData.get("amount"),
         description: formData.get("description"),
         date: formData.get("date"),
+        paymentMethod: formData.get("paymentMethod"),
       });
 
       const { error } = await supabase
@@ -99,6 +101,7 @@ const Transactions = () => {
           description: data.description,
           date: data.date,
           type: transactionType,
+          payment_method: data.paymentMethod,
         }]);
 
       if (error) throw error;
@@ -294,6 +297,22 @@ const Transactions = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+                  <Select name="paymentMethod" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Crédito">Crédito</SelectItem>
+                      <SelectItem value="Débito">Débito</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="PIX">PIX</SelectItem>
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="description">Descrição (opcional)</Label>
                   <Textarea id="description" name="description" placeholder="Ex: Frete para São Paulo" />
                 </div>
@@ -346,9 +365,15 @@ const Transactions = () => {
                           {transaction.description && (
                             <p className="text-sm text-muted-foreground">{transaction.description}</p>
                           )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(parseLocalDate(transaction.date), "dd/MM/yyyy")}
-                          </p>
+                          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                            <span>{format(parseLocalDate(transaction.date), "dd/MM/yyyy")}</span>
+                            {transaction.payment_method && (
+                              <>
+                                <span>•</span>
+                                <span>{transaction.payment_method}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">

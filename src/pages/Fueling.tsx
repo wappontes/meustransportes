@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Fuel, Trash2 } from "lucide-react";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { parseLocalDate, formatDateForInput } from "@/lib/dateUtils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,6 +36,8 @@ const Fueling = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -80,14 +83,14 @@ const Fueling = () => {
 
     if (vehicleFuelings.length < 2) return null;
 
-    let totalKm = 0;
-    let totalLiters = 0;
-
-    for (let i = 1; i < vehicleFuelings.length; i++) {
-      const kmDiff = vehicleFuelings[i].odometer - vehicleFuelings[i - 1].odometer;
-      totalKm += kmDiff;
-      totalLiters += vehicleFuelings[i].liters;
-    }
+    // Calcula a diferença total de km entre o primeiro e o último abastecimento
+    const totalKm = vehicleFuelings[vehicleFuelings.length - 1].odometer - vehicleFuelings[0].odometer;
+    
+    // Soma os litros de todos os abastecimentos EXCETO o primeiro
+    // (pois não sabemos quanto foi consumido antes do primeiro registro)
+    const totalLiters = vehicleFuelings
+      .slice(1)
+      .reduce((sum, f) => sum + f.liters, 0);
 
     return totalLiters > 0 ? (totalKm / totalLiters).toFixed(2) : null;
   };
@@ -196,15 +199,66 @@ const Fueling = () => {
     return <Layout userName="..."><div className="p-8">Carregando...</div></Layout>;
   }
 
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+  
+  const filteredFuelings = fuelings.filter(f => {
+    const matchesVehicle = selectedVehicleId === "all" || f.vehicle_id === selectedVehicleId;
+    const matchesMonth = isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd });
+    return matchesVehicle && matchesMonth;
+  });
+
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const date = subMonths(new Date(), i);
+    return {
+      value: date.toISOString(),
+      label: format(date, "MMMM 'de' yyyy", { locale: ptBR })
+    };
+  });
+
   return (
     <Layout userName={user?.email || "Usuário"}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold text-foreground">Abastecimento</h2>
             <p className="text-muted-foreground">Controle de combustível e consumo</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              value={selectedVehicleId}
+              onValueChange={setSelectedVehicleId}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por veículo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os veículos</SelectItem>
+                {vehicles.map(vehicle => (
+                  <SelectItem key={vehicle.id} value={vehicle.id}>
+                    {vehicle.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={selectedDate.toISOString()}
+              onValueChange={(value) => setSelectedDate(new Date(value))}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue>
+                  {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -297,6 +351,7 @@ const Fueling = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -336,7 +391,7 @@ const Fueling = () => {
           })}
         </div>
 
-        {fuelings.length === 0 ? (
+        {filteredFuelings.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Fuel className="w-16 h-16 text-muted-foreground mb-4" />
@@ -348,7 +403,7 @@ const Fueling = () => {
         ) : (
           <div className="space-y-3">
             <h3 className="text-xl font-semibold">Histórico de Abastecimentos</h3>
-            {fuelings.map((fueling) => {
+            {filteredFuelings.map((fueling) => {
               const vehicle = vehicles.find(v => v.id === fueling.vehicle_id);
               const pricePerLiter = fueling.total_amount / fueling.liters;
 
