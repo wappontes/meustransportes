@@ -1,6 +1,20 @@
 # Configuração do Supabase
 
-## Passo 1: Executar SQL no Supabase
+## ⚠️ RESET COMPLETO (Recomendado se houver erros)
+
+Se você está enfrentando erros com o banco de dados, use o script de reset:
+
+1. Acesse seu projeto no Supabase: https://msmlfjwskkabzfwhurzk.supabase.co
+2. No menu lateral, clique em **SQL Editor**
+3. Crie uma nova query
+4. Copie todo o conteúdo do arquivo `reset-database-complete.sql` na raiz do projeto
+5. Execute o SQL (botão RUN no canto inferior direito)
+
+**IMPORTANTE:** Este script apaga TUDO e recria do zero. Todos os dados serão perdidos.
+
+---
+
+## Passo 1: Executar SQL no Supabase (Setup Inicial)
 
 1. Acesse seu projeto no Supabase: https://msmlfjwskkabzfwhurzk.supabase.co
 2. No menu lateral, clique em **SQL Editor**
