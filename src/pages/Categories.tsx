@@ -297,7 +297,7 @@ const Categories = () => {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhuma</SelectItem>
+                        <SelectItem value="Nenhuma">Nenhuma</SelectItem>
                         <SelectItem value="Crédito">Crédito</SelectItem>
                         <SelectItem value="Débito">Débito</SelectItem>
                         <SelectItem value="Dinheiro">Dinheiro</SelectItem>
