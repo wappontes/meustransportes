@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, TrendingUp, TrendingDown, Trash2, Edit } from "lucide-react";
@@ -22,6 +23,7 @@ const Categories = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<any[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [categoryType, setCategoryType] = useState<"income" | "expense">("income");
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
@@ -67,11 +69,13 @@ const Categories = () => {
       const data = categorySchema.parse({
         name: formData.get("name"),
       });
+      
+      const payment = formData.get("paymentMethod") as string;
 
       if (editingCategory) {
         const { error } = await supabase
           .from("categories")
-          .update({ ...data, user_id: user!.id })
+          .update({ name: data.name, payment_method: payment })
           .eq("id", editingCategory.id);
 
         if (error) throw error;
@@ -79,7 +83,13 @@ const Categories = () => {
       } else {
         const { error } = await supabase
           .from("categories")
-          .insert([{ ...data, type: categoryType, user_id: user!.id }]);
+          .insert([{ 
+            user_id: user!.id, 
+            name: data.name, 
+            type: categoryType,
+            payment_method: payment,
+            is_system: false 
+          }]);
 
         if (error) throw error;
         toast({ title: "Categoria cadastrada com sucesso!" });
@@ -107,7 +117,16 @@ const Categories = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, isSystem: boolean) => {
+    if (isSystem) {
+      toast({
+        title: "Categoria do sistema",
+        description: "Esta categoria não pode ser removida",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("categories")
@@ -129,6 +148,7 @@ const Categories = () => {
 
   const handleEdit = (category: any) => {
     setEditingCategory(category);
+    setPaymentMethod(category.payment_method || "");
     setCategoryType(category.type);
     setIsDialogOpen(true);
   };
@@ -163,11 +183,21 @@ const Categories = () => {
           <Card key={category.id} className="shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Icon className={`w-5 h-5 ${color}`} />
                   <CardTitle className="text-base">{category.name}</CardTitle>
+                  {category.is_system && (
+                    <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800">
+                      Sistema
+                    </span>
+                  )}
                 </div>
               </div>
+              {category.payment_method && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {category.payment_method}
+                </p>
+              )}
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex gap-2">
@@ -175,7 +205,12 @@ const Categories = () => {
                   <Edit className="w-3 h-3 mr-1" />
                   Editar
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(category.id)}>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => handleDelete(category.id, category.is_system)}
+                  disabled={category.is_system}
+                >
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -255,6 +290,22 @@ const Categories = () => {
                       </div>
                     </div>
                   )}
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentMethod">Forma de Pagamento (opcional)</Label>
+                    <Select name="paymentMethod" defaultValue={paymentMethod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhuma</SelectItem>
+                        <SelectItem value="Crédito">Crédito</SelectItem>
+                        <SelectItem value="Débito">Débito</SelectItem>
+                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                        <SelectItem value="Outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button type="submit" className="w-full">
                     {editingCategory ? "Atualizar" : "Criar"} Categoria
                   </Button>

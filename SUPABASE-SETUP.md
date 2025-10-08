@@ -59,6 +59,17 @@ Isso irá criar:
 
 ## Migração (se necessário)
 
+### Adicionar formas de pagamento e categorias do sistema
+Execute o arquivo `migration-add-payment-and-system-categories.sql` no SQL Editor do Supabase.
+
+Este script adiciona:
+- Campo `payment_method` nas tabelas `transactions` e `fuelings`
+- Campo `location` na tabela `fuelings`  
+- Campo `is_system` na tabela `categories`
+- Categorias fixas do sistema: **Combustível**, **Manutenção** e **Pedágio** (não podem ser deletadas)
+- Integração automática: ao registrar um abastecimento, cria automaticamente uma transação de despesa
+
+### Adicionar campo telefone (migrações antigas)
 Se você já tinha o banco criado antes e precisa adicionar o campo telefone:
 - Execute o arquivo `migration-add-phone.sql` no SQL Editor
 

@@ -22,6 +22,8 @@ const fuelingSchema = z.object({
   totalAmount: z.coerce.number().positive("Valor deve ser positivo"),
   odometer: z.coerce.number().positive("Quilometragem deve ser positiva"),
   date: z.string().min(1, "Data é obrigatória"),
+  paymentMethod: z.string().min(1, "Selecione a forma de pagamento"),
+  location: z.string().min(1, "Informe o local"),
 });
 
 const Fueling = () => {
@@ -30,6 +32,7 @@ const Fueling = () => {
   const { user, loading: authLoading } = useAuth();
   const [fuelings, setFuelings] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -45,16 +48,19 @@ const Fueling = () => {
 
   const fetchData = async () => {
     try {
-      const [fuelingsRes, vehiclesRes] = await Promise.all([
+      const [fuelingsRes, vehiclesRes, categoriesRes] = await Promise.all([
         supabase.from("fuelings").select("*").order("date", { ascending: false }),
         supabase.from("vehicles").select("*"),
+        supabase.from("categories").select("*").eq("type", "expense"),
       ]);
 
       if (fuelingsRes.error) throw fuelingsRes.error;
       if (vehiclesRes.error) throw vehiclesRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
 
       setFuelings(fuelingsRes.data || []);
       setVehicles(vehiclesRes.data || []);
+      setCategories(categoriesRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -99,9 +105,19 @@ const Fueling = () => {
         totalAmount: formData.get("totalAmount"),
         odometer: formData.get("odometer"),
         date: formData.get("date"),
+        paymentMethod: formData.get("paymentMethod"),
+        location: formData.get("location"),
       });
 
-      const { error } = await supabase
+      // Find "Combustível" category
+      const fuelCategory = categories.find(c => c.name === "Combustível");
+      
+      if (!fuelCategory) {
+        throw new Error("Categoria 'Combustível' não encontrada");
+      }
+
+      // Insert fueling
+      const { error: fuelingError } = await supabase
         .from("fuelings")
         .insert([{
           user_id: user!.id,
@@ -111,9 +127,27 @@ const Fueling = () => {
           total_amount: data.totalAmount,
           odometer: data.odometer,
           date: data.date,
+          payment_method: data.paymentMethod,
+          location: data.location,
         }]);
 
-      if (error) throw error;
+      if (fuelingError) throw fuelingError;
+
+      // Create automatic transaction
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert([{
+          user_id: user!.id,
+          vehicle_id: data.vehicleId,
+          category_id: fuelCategory.id,
+          type: "expense",
+          amount: data.totalAmount,
+          description: `Abastecimento - ${data.location}`,
+          date: data.date,
+          payment_method: data.paymentMethod,
+        }]);
+
+      if (transactionError) throw transactionError;
 
       toast({ title: "Abastecimento registrado com sucesso!" });
       setIsDialogOpen(false);
@@ -236,6 +270,27 @@ const Fueling = () => {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+                  <Select name="paymentMethod" required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Crédito">Crédito</SelectItem>
+                      <SelectItem value="Débito">Débito</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="PIX">PIX</SelectItem>
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="location">Local</Label>
+                  <Input id="location" name="location" placeholder="Ex: Posto Shell" required />
+                </div>
+
                 <Button type="submit" className="w-full">
                   Registrar Abastecimento
                 </Button>
@@ -316,6 +371,11 @@ const Fueling = () => {
                             <span>R$ {pricePerLiter.toFixed(2)}/L</span>
                             <span>{fueling.odometer.toLocaleString()} km</span>
                           </div>
+                          {fueling.payment_method && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {fueling.payment_method} • {fueling.location}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground mt-1">
                             {format(parseLocalDate(fueling.date), "dd/MM/yyyy")}
                           </p>
