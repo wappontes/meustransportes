@@ -62,7 +62,8 @@ const Profile = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
     const newPassword = formData.get("newPassword") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
 
@@ -84,7 +85,7 @@ const Profile = () => {
           title: "Senha alterada!",
           description: "Sua senha foi atualizada com sucesso.",
         });
-        e.currentTarget.reset();
+        form.reset();
       }
     } catch (error) {
       if (error instanceof z.ZodError) {

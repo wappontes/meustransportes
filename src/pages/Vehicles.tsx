@@ -62,8 +62,8 @@ const Vehicles = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
     try {
       const data = vehicleSchema.parse({
         name: formData.get("name"),
@@ -92,7 +92,7 @@ const Vehicles = () => {
 
       setIsDialogOpen(false);
       setEditingVehicle(null);
-      e.currentTarget.reset();
+      form.reset();
       await fetchVehicles();
     } catch (error) {
       if (error instanceof z.ZodError) {

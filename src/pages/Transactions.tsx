@@ -77,7 +77,8 @@ const Transactions = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const form = e.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
     
     try {
       const data = transactionSchema.parse({
@@ -104,7 +105,7 @@ const Transactions = () => {
 
       toast({ title: `${transactionType === "income" ? "Receita" : "Despesa"} registrada com sucesso!` });
       setIsDialogOpen(false);
-      e.currentTarget.reset();
+      form.reset();
       await fetchData();
     } catch (error) {
       if (error instanceof z.ZodError) {
