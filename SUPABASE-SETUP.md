@@ -21,8 +21,10 @@ Isso irá criar:
 
 1. No Supabase, vá em **Authentication** → **URL Configuration**
 2. Configure:
-   - **Site URL**: Cole a URL do seu projeto Lovable
-   - **Redirect URLs**: Adicione a URL do seu projeto Lovable
+   - **Site URL**: Cole a URL do seu projeto na Vercel (ex: https://seu-app.vercel.app)
+   - **Redirect URLs**: Adicione estas URLs:
+     - https://seu-app.vercel.app/reset-password
+     - https://seu-app.vercel.app
 
 ## Passo 3: Desabilitar confirmação de email (opcional, para testes)
 
@@ -30,6 +32,25 @@ Isso irá criar:
 2. Desmarque a opção **Confirm email**
 3. Isso permitirá que você teste o login sem precisar confirmar o email
 
+## Migração (se necessário)
+
+Se você já tinha o banco criado antes e precisa adicionar o campo telefone:
+- Execute o arquivo `migration-add-phone.sql` no SQL Editor
+
+## Problemas Comuns e Soluções
+
+### ❌ Erro ao salvar registros
+**Causa**: Falta política RLS de INSERT na tabela profiles
+**Solução**: Execute novamente o `database-setup.sql` completo (ele inclui a política de INSERT)
+
+### ❌ Logout não funciona na Vercel
+**Causa**: Problemas com navegação em produção
+**Solução**: Já corrigido no código usando `window.location.href`
+
+### ❌ Dados do perfil não aparecem
+**Causa**: Perfil não foi criado automaticamente no signup
+**Solução**: O trigger `handle_new_user` agora está corrigido e inclui todos os campos
+
 ## Pronto!
 
-Agora sua aplicação está conectada ao Supabase e pronta para uso em produção. Todos os dados serão salvos no banco de dados PostgreSQL do Supabase.
+Agora sua aplicação está conectada ao Supabase e pronta para uso em produção.

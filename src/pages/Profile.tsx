@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Phone, Lock, User } from "lucide-react";
 import { z } from "zod";
+import Layout from "@/components/Layout";
 
 const passwordSchema = z.object({
   newPassword: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
@@ -199,117 +200,121 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Carregando...</p>
-      </div>
+      <Layout userName={name || user?.email || "Usuário"}>
+        <div className="flex items-center justify-center py-12">
+          <p>Carregando...</p>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl space-y-6">
-      <h1 className="text-3xl font-bold">Meu Perfil</h1>
+    <Layout userName={name || user?.email || "Usuário"}>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold">Meu Perfil</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Informações Pessoais
-          </CardTitle>
-          <CardDescription>Atualize seu nome</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleUpdateName} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                placeholder="Seu nome completo"
-                defaultValue={name}
-                required
-              />
-            </div>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Salvando..." : "Salvar Nome"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="w-5 h-5" />
-            Telefone
-          </CardTitle>
-          <CardDescription>Adicione seu telefone e acesse o WhatsApp rapidamente</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleUpdatePhone} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
-              <div className="flex gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Informações Pessoais
+            </CardTitle>
+            <CardDescription>Atualize seu nome</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdateName} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
                 <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  placeholder="5511999999999"
-                  defaultValue={phone}
+                  id="name"
+                  name="name"
+                  type="text"
+                  placeholder="Seu nome completo"
+                  defaultValue={name}
                   required
                 />
-                <Button type="button" variant="outline" onClick={openWhatsApp} disabled={!phone}>
-                  <Phone className="w-4 h-4 mr-2" />
-                  WhatsApp
-                </Button>
               </div>
-            </div>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Salvando..." : "Salvar Telefone"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Salvando..." : "Salvar Nome"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Alterar Senha
-          </CardTitle>
-          <CardDescription>Atualize sua senha de acesso</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleUpdatePassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Nova Senha</Label>
-              <Input
-                id="newPassword"
-                name="newPassword"
-                type="password"
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Alterando..." : "Alterar Senha"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="w-5 h-5" />
+              Telefone
+            </CardTitle>
+            <CardDescription>Adicione seu telefone e acesse o WhatsApp rapidamente</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdatePhone} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="5511999999999"
+                    defaultValue={phone}
+                    required
+                  />
+                  <Button type="button" variant="outline" onClick={openWhatsApp} disabled={!phone}>
+                    <Phone className="w-4 h-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                </div>
+              </div>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Salvando..." : "Salvar Telefone"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Alterar Senha
+            </CardTitle>
+            <CardDescription>Atualize sua senha de acesso</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova Senha</Label>
+                <Input
+                  id="newPassword"
+                  name="newPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Alterando..." : "Alterar Senha"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
   );
 };
 
