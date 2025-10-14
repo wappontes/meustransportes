@@ -12,6 +12,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import DetailedReport from "@/components/DetailedReport";
 
 const DashboardNew = () => {
   const navigate = useNavigate();
@@ -533,6 +534,13 @@ const DashboardNew = () => {
             </CardContent>
           </Card>
         </div>
+
+        <DetailedReport
+          transactions={userTransactions}
+          fuelings={userFuelings}
+          vehicles={vehicles}
+          categories={categories}
+        />
 
         <Card className="shadow-md">
           <CardHeader>
