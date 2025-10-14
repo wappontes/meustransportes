@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Fuel, DollarSign } from "lucide-react";
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
+import { formatCurrency } from "@/lib/formatters";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { supabase } from "@/lib/supabase";
@@ -206,27 +207,33 @@ const DashboardNew = () => {
     };
   });
 
-  // Expenses by category for pie chart
+  // Expenses by category and status for stacked bar chart
   const expensesByCategory = categories
     .filter((c) => c.type === "expense")
     .map((cat) => ({
       name: cat.name,
-      value: monthlyTransactions
-        .filter((t) => t.type === "expense" && t.category_id === cat.id)
+      programado: monthlyTransactions
+        .filter((t) => t.type === "expense" && t.category_id === cat.id && t.status === "programado")
+        .reduce((sum, t) => sum + t.amount, 0),
+      efetivado: monthlyTransactions
+        .filter((t) => t.type === "expense" && t.category_id === cat.id && t.status === "efetivado")
         .reduce((sum, t) => sum + t.amount, 0),
     }))
-    .filter((item) => item.value > 0);
+    .filter((item) => item.programado > 0 || item.efetivado > 0);
 
-  // Income by category for pie chart
+  // Income by category and status for stacked bar chart
   const incomeByCategory = categories
     .filter((c) => c.type === "income")
     .map((cat) => ({
       name: cat.name,
-      value: monthlyTransactions
-        .filter((t) => t.type === "income" && t.category_id === cat.id)
+      programado: monthlyTransactions
+        .filter((t) => t.type === "income" && t.category_id === cat.id && t.status === "programado")
+        .reduce((sum, t) => sum + t.amount, 0),
+      efetivado: monthlyTransactions
+        .filter((t) => t.type === "income" && t.category_id === cat.id && t.status === "efetivado")
         .reduce((sum, t) => sum + t.amount, 0),
     }))
-    .filter((item) => item.value > 0);
+    .filter((item) => item.programado > 0 || item.efetivado > 0);
 
   const COLORS = [
     "#3B82F6", // blue
@@ -292,15 +299,15 @@ const DashboardNew = () => {
               <TrendingUp className="w-4 h-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-success">R$ {monthlyIncome.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-success">{formatCurrency(monthlyIncome)}</div>
               <div className="space-y-1 mt-2">
                 <p className="text-xs text-muted-foreground flex justify-between">
                   <span>Programado:</span>
-                  <span className="text-amber-500 font-medium">R$ {scheduledIncome.toFixed(2)}</span>
+                  <span className="text-amber-500 font-medium">{formatCurrency(scheduledIncome)}</span>
                 </p>
                 <p className="text-xs text-muted-foreground flex justify-between">
                   <span>Recebido:</span>
-                  <span className="text-success font-medium">R$ {receivedIncome.toFixed(2)}</span>
+                  <span className="text-success font-medium">{formatCurrency(receivedIncome)}</span>
                 </p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -316,15 +323,15 @@ const DashboardNew = () => {
               <TrendingDown className="w-4 h-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">R$ {monthlyExpenses.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-destructive">{formatCurrency(monthlyExpenses)}</div>
               <div className="space-y-1 mt-2">
                 <p className="text-xs text-muted-foreground flex justify-between">
                   <span>Programado:</span>
-                  <span className="text-amber-500 font-medium">R$ {scheduledExpenses.toFixed(2)}</span>
+                  <span className="text-amber-500 font-medium">{formatCurrency(scheduledExpenses)}</span>
                 </p>
                 <p className="text-xs text-muted-foreground flex justify-between">
                   <span>Efetivado:</span>
-                  <span className="text-destructive font-medium">R$ {paidExpenses.toFixed(2)}</span>
+                  <span className="text-destructive font-medium">{formatCurrency(paidExpenses)}</span>
                 </p>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
@@ -341,7 +348,7 @@ const DashboardNew = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary">
-                R$ {costPerKm > 0 ? costPerKm.toFixed(2) : "0.00"}
+                {formatCurrency(costPerKm > 0 ? costPerKm : 0)}/km
               </div>
               <p className="text-xs text-muted-foreground mt-1">Despesas efetivadas / Km rodado</p>
             </CardContent>
@@ -437,41 +444,41 @@ const DashboardNew = () => {
                   <CardTitle>Despesas por Categoria</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={{}} className="h-[300px]">
+                  <ChartContainer 
+                    config={{
+                      programado: { label: "Programado", color: "#F59E0B" },
+                      efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
+                    }} 
+                    className="h-[300px]"
+                  >
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={expensesByCategory}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent, value }) => {
-                            const val = typeof value === "number" ? value : 0;
-                            return `${name}\nR$ ${val.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
-                          }}
-                          outerRadius={80}
-                          fill="hsl(var(--primary))"
-                          dataKey="value"
-                        >
-                          {expensesByCategory.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip
+                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
+                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={100} />
+                        <ChartTooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
-                              const value = typeof payload[0].value === "number" ? payload[0].value : 0;
                               return (
-                                <div className="bg-background border border-border p-2 rounded shadow-lg">
-                                  <p className="font-semibold">{payload[0].name}</p>
-                                  <p className="text-sm">R$ {value.toFixed(2)}</p>
+                                <div className="bg-background border border-border p-3 rounded shadow-lg">
+                                  <p className="font-semibold mb-2">{payload[0].payload.name}</p>
+                                  {payload.map((entry, index) => (
+                                    <p key={index} className="text-sm flex items-center gap-2">
+                                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                                      <span>{entry.name}:</span>
+                                      <span className="font-medium">{formatCurrency(Number(entry.value))}</span>
+                                    </p>
+                                  ))}
                                 </div>
                               );
                             }
                             return null;
                           }}
                         />
-                      </PieChart>
+                        <Legend />
+                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
+                        <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
+                      </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>
@@ -484,41 +491,41 @@ const DashboardNew = () => {
                   <CardTitle>Receitas por Categoria</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={{}} className="h-[300px]">
+                  <ChartContainer 
+                    config={{
+                      programado: { label: "Programado", color: "#F59E0B" },
+                      efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
+                    }} 
+                    className="h-[300px]"
+                  >
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={incomeByCategory}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent, value }) => {
-                            const val = typeof value === "number" ? value : 0;
-                            return `${name}\nR$ ${val.toFixed(2)} (${(percent * 100).toFixed(1)}%)`;
-                          }}
-                          outerRadius={80}
-                          fill="hsl(var(--primary))"
-                          dataKey="value"
-                        >
-                          {incomeByCategory.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip
+                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
+                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={100} />
+                        <ChartTooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
-                              const value = typeof payload[0].value === "number" ? payload[0].value : 0;
                               return (
-                                <div className="bg-background border border-border p-2 rounded shadow-lg">
-                                  <p className="font-semibold">{payload[0].name}</p>
-                                  <p className="text-sm">R$ {value.toFixed(2)}</p>
+                                <div className="bg-background border border-border p-3 rounded shadow-lg">
+                                  <p className="font-semibold mb-2">{payload[0].payload.name}</p>
+                                  {payload.map((entry, index) => (
+                                    <p key={index} className="text-sm flex items-center gap-2">
+                                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                                      <span>{entry.name}:</span>
+                                      <span className="font-medium">{formatCurrency(Number(entry.value))}</span>
+                                    </p>
+                                  ))}
                                 </div>
                               );
                             }
                             return null;
                           }}
                         />
-                      </PieChart>
+                        <Legend />
+                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
+                        <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
+                      </BarChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 </CardContent>

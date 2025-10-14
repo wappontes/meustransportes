@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Receipt, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
+import { Plus, Receipt, TrendingUp, TrendingDown, Trash2, RefreshCw } from "lucide-react";
+import { formatCurrency } from "@/lib/formatters";
 import { z } from "zod";
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -146,6 +147,32 @@ const Transactions = () => {
       console.error("Error deleting transaction:", error);
       toast({
         title: "Erro ao remover transação",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === "programado" ? "efetivado" : "programado";
+      
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: newStatus })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({ 
+        title: "Status atualizado!", 
+        description: `Transação marcada como ${newStatus === "programado" ? "Programado" : "Efetivado"}` 
+      });
+      await fetchData();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Erro ao atualizar status",
         description: "Tente novamente mais tarde",
         variant: "destructive",
       });
@@ -404,8 +431,16 @@ const Transactions = () => {
                         <span className={`text-lg font-bold ${
                           isIncome ? "text-success" : "text-destructive"
                         }`}>
-                          {isIncome ? "+" : "-"} R$ {transaction.amount.toFixed(2)}
+                          {isIncome ? "+" : "-"} {formatCurrency(transaction.amount)}
                         </span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleToggleStatus(transaction.id, transaction.status)}
+                          title={transaction.status === "programado" ? "Marcar como efetivado" : "Marcar como programado"}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${transaction.status === "programado" ? "text-amber-500" : "text-success"}`} />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
