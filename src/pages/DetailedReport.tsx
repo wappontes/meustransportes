@@ -1,26 +1,25 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileDown, Loader2 } from "lucide-react";
+import { FileDown, Loader2, ArrowLeft } from "lucide-react";
 import { format, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { formatCurrency } from "@/lib/formatters";
 import { ChartContainer } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-interface DetailedReportProps {
-  transactions: any[];
-  fuelings: any[];
-  vehicles: any[];
-  categories: any[];
-}
-
-const DetailedReport = ({ transactions, fuelings, vehicles, categories }: DetailedReportProps) => {
+const DetailedReport = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 1);
@@ -28,7 +27,47 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
   });
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [exporting, setExporting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [fuelings, setFuelings] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/");
+      return;
+    }
+    if (user) {
+      fetchData();
+    }
+  }, [user, authLoading, navigate]);
+
+  const fetchData = async () => {
+    try {
+      const [transactionsRes, fuelingsRes, vehiclesRes, categoriesRes] = await Promise.all([
+        supabase.from("transactions").select("*"),
+        supabase.from("fuelings").select("*"),
+        supabase.from("vehicles").select("*"),
+        supabase.from("categories").select("*"),
+      ]);
+
+      if (transactionsRes.error) throw transactionsRes.error;
+      if (fuelingsRes.error) throw fuelingsRes.error;
+      if (vehiclesRes.error) throw vehiclesRes.error;
+      if (categoriesRes.error) throw categoriesRes.error;
+
+      setTransactions(transactionsRes.data || []);
+      setFuelings(fuelingsRes.data || []);
+      setVehicles(vehiclesRes.data || []);
+      setCategories(categoriesRes.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTransactions = transactions.filter((t) => {
     const txDate = parseLocalDate(t.date);
@@ -46,7 +85,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
     });
   });
 
-  // Calculate totals
   const totalIncome = filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpenses;
@@ -65,7 +103,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
     .filter((t) => t.type === "expense" && t.status === "efetivado")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Calculate km driven
   const totalKmDriven = vehicles.reduce((total, vehicle) => {
     const vehicleFuelings = filteredFuelings
       .filter((f) => f.vehicle_id === vehicle.id)
@@ -78,7 +115,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
     return total;
   }, 0);
 
-  // Expenses by category
   const expensesByCategory = categories
     .filter((c) => c.type === "expense")
     .map((cat) => ({
@@ -92,7 +128,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
     }))
     .filter((item) => item.programado > 0 || item.efetivado > 0);
 
-  // Income by category
   const incomeByCategory = categories
     .filter((c) => c.type === "income")
     .map((cat) => ({
@@ -106,13 +141,14 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
     }))
     .filter((item) => item.programado > 0 || item.efetivado > 0);
 
-  // Expenses by vehicle
-  const expensesByVehicle = vehicles.map((vehicle) => ({
-    name: vehicle.name,
-    value: filteredTransactions
-      .filter((t) => t.type === "expense" && t.vehicle_id === vehicle.id)
-      .reduce((sum, t) => sum + t.amount, 0),
-  })).filter((item) => item.value > 0);
+  const expensesByVehicle = vehicles
+    .map((vehicle) => ({
+      name: vehicle.name,
+      value: filteredTransactions
+        .filter((t) => t.type === "expense" && t.vehicle_id === vehicle.id)
+        .reduce((sum, t) => sum + t.amount, 0),
+    }))
+    .filter((item) => item.value > 0);
 
   const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
 
@@ -153,47 +189,59 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
     }
   };
 
+  if (loading || authLoading) {
+    return (
+      <Layout userName="...">
+        <div className="p-8">Carregando...</div>
+      </Layout>
+    );
+  }
+
   return (
-    <Card className="shadow-md">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle>Relatório Detalhado</CardTitle>
-          <Button onClick={handleExportPDF} disabled={exporting} className="gap-2">
-            {exporting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Gerando PDF...
-              </>
-            ) : (
-              <>
-                <FileDown className="w-4 h-4" />
-                Exportar PDF
-              </>
-            )}
+    <Layout userName={user?.email || "Usuário"}>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
-            <Label htmlFor="startDate">Data Início</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="endDate">Data Fim</Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <h2 className="text-3xl font-bold text-foreground">Relatório Detalhado</h2>
+            <p className="text-muted-foreground">Análise completa do período selecionado</p>
           </div>
         </div>
+
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle>Filtros e Exportação</CardTitle>
+              <Button onClick={handleExportPDF} disabled={exporting} className="gap-2">
+                {exporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Gerando PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4" />
+                    Exportar PDF
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="startDate">Data Início</Label>
+                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="endDate">Data Fim</Label>
+                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div ref={reportRef} className="space-y-6 bg-background p-6 rounded-lg">
           <div className="text-center border-b pb-4">
@@ -204,7 +252,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
             </p>
           </div>
 
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
@@ -243,10 +290,11 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
             </Card>
           </div>
 
-          {/* Detailed Transactions */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold mb-3 text-success">Receitas ({filteredTransactions.filter(t => t.type === "income").length})</h3>
+              <h3 className="text-lg font-semibold mb-3 text-success">
+                Receitas ({filteredTransactions.filter((t) => t.type === "income").length})
+              </h3>
               <div className="space-y-2">
                 {filteredTransactions
                   .filter((t) => t.type === "income")
@@ -273,7 +321,9 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold mb-3 text-destructive">Despesas ({filteredTransactions.filter(t => t.type === "expense").length})</h3>
+              <h3 className="text-lg font-semibold mb-3 text-destructive">
+                Despesas ({filteredTransactions.filter((t) => t.type === "expense").length})
+              </h3>
               <div className="space-y-2">
                 {filteredTransactions
                   .filter((t) => t.type === "expense")
@@ -300,7 +350,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
             </div>
           </div>
 
-          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {expensesByCategory.length > 0 && (
               <div>
@@ -354,10 +403,7 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
           {expensesByVehicle.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-3">Despesas por Veículo</h3>
-              <ChartContainer
-                config={{}}
-                className="h-[300px]"
-              >
+              <ChartContainer config={{}} className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -381,7 +427,6 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
             </div>
           )}
 
-          {/* Summary */}
           <div className="border-t pt-4">
             <h3 className="text-lg font-semibold mb-3">Resumo Geral</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -406,8 +451,8 @@ const DetailedReport = ({ transactions, fuelings, vehicles, categories }: Detail
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </Layout>
   );
 };
 

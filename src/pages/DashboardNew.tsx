@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Fuel, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, TrendingDown, Fuel, DollarSign, FileText } from "lucide-react";
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -12,7 +13,6 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import DetailedReport from "@/components/DetailedReport";
 
 const DashboardNew = () => {
   const navigate = useNavigate();
@@ -265,6 +265,10 @@ const DashboardNew = () => {
             <p className="text-muted-foreground">Visão geral financeira</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => navigate("/relatorio-detalhado")} className="gap-2">
+              <FileText className="w-4 h-4" />
+              Relatório Detalhado
+            </Button>
             <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Filtrar por veículo" />
@@ -534,13 +538,6 @@ const DashboardNew = () => {
             </CardContent>
           </Card>
         </div>
-
-        <DetailedReport
-          transactions={userTransactions}
-          fuelings={userFuelings}
-          vehicles={vehicles}
-          categories={categories}
-        />
 
         <Card className="shadow-md">
           <CardHeader>
