@@ -39,6 +39,7 @@ const Transactions = () => {
   const [transactionType, setTransactionType] = useState<"income" | "expense">("income");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -190,7 +191,8 @@ const Transactions = () => {
     .filter(t => {
       const matchesVehicle = selectedVehicleId === "all" || t.vehicle_id === selectedVehicleId;
       const matchesMonth = isWithinInterval(parseLocalDate(t.date), { start: monthStart, end: monthEnd });
-      return matchesVehicle && matchesMonth;
+      const matchesStatus = selectedStatus === "all" || t.status === selectedStatus;
+      return matchesVehicle && matchesMonth && matchesStatus;
     })
     .sort((a, b) => 
       parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
@@ -246,6 +248,19 @@ const Transactions = () => {
                     {option.label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={selectedStatus}
+              onValueChange={setSelectedStatus}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="programado">Programado</SelectItem>
+                <SelectItem value="efetivado">Efetivado</SelectItem>
               </SelectContent>
             </Select>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -443,10 +458,10 @@ const Transactions = () => {
                                 transaction.status === "efetivado" ? "translate-x-8" : "translate-x-1"
                               }`}
                             />
-                            <span className={`absolute text-[9px] font-bold text-white ${
-                              transaction.status === "efetivado" ? "left-1.5" : "right-1.5"
+                            <span className={`absolute text-[8px] font-bold text-white ${
+                              transaction.status === "efetivado" ? "left-0.5" : "right-0.5"
                             }`}>
-                              {transaction.status === "efetivado" ? "ON" : "OFF"}
+                              {transaction.status === "efetivado" ? "Efetivado" : "Programado"}
                             </span>
                           </button>
                           

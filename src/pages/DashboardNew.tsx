@@ -368,74 +368,6 @@ const DashboardNew = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Evolução Mensal (Últimos 6 Meses)</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <ChartContainer
-                config={{
-                  receitas: { label: "Receitas", color: "hsl(var(--success))" },
-                  despesas: { label: "Despesas", color: "hsl(var(--destructive))" },
-                }}
-                className="h-[300px] w-full min-w-[300px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={last6MonthsData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="month" 
-                      stroke="hsl(var(--muted-foreground))" 
-                      tick={{ fontSize: 12 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))" 
-                      tick={{ fontSize: 12 }}
-                      width={60}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Bar dataKey="receitas" fill="hsl(var(--success))" name="Receitas" />
-                    <Bar dataKey="despesas" fill="hsl(var(--destructive))" name="Despesas" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Resumo da Frota</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Total de Veículos</span>
-                  <span className="text-2xl font-bold text-primary">{vehicles.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Abastecimentos este mês</span>
-                  <span className="text-lg font-semibold">
-                    {
-                      userFuelings.filter((f) =>
-                        isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd }),
-                      ).length
-                    }
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Transações este mês</span>
-                  <span className="text-lg font-semibold">{monthlyTransactions.length}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {(expensesByCategory.length > 0 || incomeByCategory.length > 0) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {expensesByCategory.length > 0 && (
@@ -533,6 +465,74 @@ const DashboardNew = () => {
             )}
           </div>
         )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Evolução Mensal (Últimos 6 Meses)</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <ChartContainer
+                config={{
+                  receitas: { label: "Receitas", color: "hsl(var(--success))" },
+                  despesas: { label: "Despesas", color: "hsl(var(--destructive))" },
+                }}
+                className="h-[300px] w-full min-w-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={last6MonthsData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      tick={{ fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))" 
+                      tick={{ fontSize: 12 }}
+                      width={60}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="receitas" fill="hsl(var(--success))" name="Receitas" />
+                    <Bar dataKey="despesas" fill="hsl(var(--destructive))" name="Despesas" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Resumo da Frota</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Total de Veículos</span>
+                  <span className="text-2xl font-bold text-primary">{vehicles.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Abastecimentos este mês</span>
+                  <span className="text-lg font-semibold">
+                    {
+                      userFuelings.filter((f) =>
+                        isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd }),
+                      ).length
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Transações este mês</span>
+                  <span className="text-lg font-semibold">{monthlyTransactions.length}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="shadow-md">
           <CardHeader>
