@@ -20,6 +20,7 @@ const Layout = ({ children, userName }: LayoutProps) => {
 
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/relatorio-detalhado", icon: Receipt, label: "Relatório" },
     { path: "/vehicles", icon: Car, label: "Veículos" },
     { path: "/categories", icon: Tags, label: "Categorias" },
     { path: "/transactions", icon: TrendingUp, label: "Transações" },

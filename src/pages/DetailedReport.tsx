@@ -157,30 +157,15 @@ const DetailedReport = () => {
 
     setExporting(true);
     try {
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      const imgWidth = 190;
-      const pageHeight = 277;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
       const pdf = new jsPDF("p", "mm", "a4");
-      let position = 10;
-
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
+      await pdf.html(reportRef.current, {
+        x: 10,
+        y: 10,
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        margin: [10, 10, 10, 10],
+        windowWidth: reportRef.current.scrollWidth,
+        autoPaging: "text",
+      });
       pdf.save(`relatorio-${startDate}-a-${endDate}.pdf`);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -243,7 +228,7 @@ const DetailedReport = () => {
           </CardContent>
         </Card>
 
-        <div ref={reportRef} className="space-y-6 bg-background p-6 rounded-lg">
+        <div ref={reportRef} className="space-y-6 bg-background p-4 sm:p-6 rounded-lg max-w-full overflow-hidden">
           <div className="text-center border-b pb-4">
             <h2 className="text-2xl font-bold">Relatório Financeiro Detalhado</h2>
             <p className="text-muted-foreground">
@@ -354,56 +339,60 @@ const DetailedReport = () => {
             {expensesByCategory.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-3">Despesas por Categoria</h3>
-                <ChartContainer
-                  config={{
-                    programado: { label: "Programado", color: "#F59E0B" },
-                    efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
-                  }}
-                  className="h-[300px]"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
-                      <Legend />
-                      <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
-                      <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <div className="overflow-x-auto -mx-2 sm:mx-0 px-2">
+                  <ChartContainer
+                    config={{
+                      programado: { label: "Programado", color: "#F59E0B" },
+                      efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
+                    }}
+                    className="h-[260px] w-full min-w-[320px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
+                        <Legend />
+                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
+                        <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
               </div>
             )}
 
             {incomeByCategory.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-3">Receitas por Categoria</h3>
-                <ChartContainer
-                  config={{
-                    programado: { label: "Programado", color: "#F59E0B" },
-                    efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
-                  }}
-                  className="h-[300px]"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 11 }} />
-                      <Legend />
-                      <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
-                      <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <div className="overflow-x-auto -mx-2 sm:mx-0 px-2">
+                  <ChartContainer
+                    config={{
+                      programado: { label: "Programado", color: "#F59E0B" },
+                      efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
+                    }}
+                    className="h-[260px] w-full min-w-[320px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
+                        <Legend />
+                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
+                        <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
               </div>
             )}
           </div>
 
           {expensesByVehicle.length > 0 && (
-            <div>
+            <div className="overflow-x-hidden">
               <h3 className="text-lg font-semibold mb-3">Despesas por Veículo</h3>
-              <ChartContainer config={{}} className="h-[300px]">
+              <ChartContainer config={{}} className="h-[280px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
