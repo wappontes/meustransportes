@@ -443,19 +443,19 @@ const DashboardNew = () => {
                 <CardHeader>
                   <CardTitle>Despesas por Categoria</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <ChartContainer 
                     config={{
                       programado: { label: "Programado", color: "#F59E0B" },
                       efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
                     }} 
-                    className="h-[300px]"
+                    className="h-[300px] w-full min-w-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
-                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={100} />
+                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} />
+                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={80} tick={{ fontSize: 11 }} />
                         <ChartTooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
@@ -475,7 +475,7 @@ const DashboardNew = () => {
                             return null;
                           }}
                         />
-                        <Legend />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
                         <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
                       </BarChart>
@@ -490,19 +490,19 @@ const DashboardNew = () => {
                 <CardHeader>
                   <CardTitle>Receitas por Categoria</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <ChartContainer 
                     config={{
                       programado: { label: "Programado", color: "#F59E0B" },
                       efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
                     }} 
-                    className="h-[300px]"
+                    className="h-[300px] w-full min-w-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
-                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={100} />
+                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" tick={{ fontSize: 12 }} />
+                        <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={80} tick={{ fontSize: 11 }} />
                         <ChartTooltip 
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
@@ -522,7 +522,7 @@ const DashboardNew = () => {
                             return null;
                           }}
                         />
-                        <Legend />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
                         <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
                       </BarChart>

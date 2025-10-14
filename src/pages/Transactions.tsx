@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Receipt, TrendingUp, TrendingDown, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Receipt, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { z } from "zod";
 import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from "date-fns";
@@ -388,9 +388,9 @@ const Transactions = () => {
               return (
                 <Card key={transaction.id} className="shadow-md">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                           isIncome ? "bg-success/10" : "bg-destructive/10"
                         }`}>
                           {isIncome ? (
@@ -399,16 +399,16 @@ const Transactions = () => {
                             <TrendingDown className="w-5 h-5 text-destructive" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{category?.name}</h3>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold truncate">{category?.name}</h3>
                             <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-sm text-muted-foreground">{vehicle?.name}</span>
+                            <span className="text-sm text-muted-foreground truncate">{vehicle?.name}</span>
                           </div>
                           {transaction.description && (
-                            <p className="text-sm text-muted-foreground">{transaction.description}</p>
+                            <p className="text-sm text-muted-foreground truncate">{transaction.description}</p>
                           )}
-                          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
                             <span>{format(parseLocalDate(transaction.date), "dd/MM/yyyy")}</span>
                             {transaction.payment_method && (
                               <>
@@ -416,38 +416,49 @@ const Transactions = () => {
                                 <span>{transaction.payment_method}</span>
                               </>
                             )}
-                            {transaction.status && (
-                              <>
-                                <span>•</span>
-                                <span className={transaction.status === "programado" ? "text-amber-500" : "text-success"}>
-                                  {transaction.status === "programado" ? "Programado" : "Efetivado"}
-                                </span>
-                              </>
-                            )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      
+                      <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0">
                         <span className={`text-lg font-bold ${
                           isIncome ? "text-success" : "text-destructive"
                         }`}>
                           {isIncome ? "+" : "-"} {formatCurrency(transaction.amount)}
                         </span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleToggleStatus(transaction.id, transaction.status)}
-                          title={transaction.status === "programado" ? "Marcar como efetivado" : "Marcar como programado"}
-                        >
-                          <RefreshCw className={`w-4 h-4 ${transaction.status === "programado" ? "text-amber-500" : "text-success"}`} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleDelete(transaction.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        
+                        <div className="flex items-center gap-2">
+                          {/* Toggle Switch for Status */}
+                          <button
+                            onClick={() => handleToggleStatus(transaction.id, transaction.status)}
+                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                              transaction.status === "efetivado" 
+                                ? "bg-success" 
+                                : "bg-amber-500"
+                            }`}
+                            title={transaction.status === "programado" ? "Programado - Clique para Efetivar" : "Efetivado - Clique para marcar como Programado"}
+                          >
+                            <span
+                              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                                transaction.status === "efetivado" ? "translate-x-8" : "translate-x-1"
+                              }`}
+                            />
+                            <span className={`absolute text-[9px] font-bold text-white ${
+                              transaction.status === "efetivado" ? "left-1.5" : "right-1.5"
+                            }`}>
+                              {transaction.status === "efetivado" ? "ON" : "OFF"}
+                            </span>
+                          </button>
+                          
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDelete(transaction.id)}
+                            className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
