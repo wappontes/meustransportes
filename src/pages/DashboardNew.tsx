@@ -90,6 +90,23 @@ const DashboardNew = () => {
 
   const monthlyBalance = monthlyIncome - monthlyExpenses;
 
+  // Separate by status
+  const scheduledIncome = monthlyTransactions
+    .filter((t) => t.type === "income" && t.status === "programado")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const receivedIncome = monthlyTransactions
+    .filter((t) => t.type === "income" && t.status === "efetivado")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const scheduledExpenses = monthlyTransactions
+    .filter((t) => t.type === "expense" && t.status === "programado")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const paidExpenses = monthlyTransactions
+    .filter((t) => t.type === "expense" && t.status === "efetivado")
+    .reduce((sum, t) => sum + t.amount, 0);
+
   // Calculate average fuel consumption
   const calculateAverageConsumption = () => {
     const consumptions: number[] = [];
@@ -120,6 +137,33 @@ const DashboardNew = () => {
   };
 
   const avgConsumption = calculateAverageConsumption();
+
+  // Calculate cost per km driven
+  const calculateCostPerKm = () => {
+    let totalExpenses = 0;
+    let totalKmDriven = 0;
+
+    vehicles.forEach((vehicle) => {
+      const vehicleFuelings = userFuelings
+        .filter((f) => f.vehicle_id === vehicle.id && isWithinInterval(parseLocalDate(f.date), { start: monthStart, end: monthEnd }))
+        .sort((a, b) => a.odometer - b.odometer);
+
+      if (vehicleFuelings.length >= 2) {
+        const kmDriven = vehicleFuelings[vehicleFuelings.length - 1].odometer - vehicleFuelings[0].odometer;
+        totalKmDriven += kmDriven;
+      }
+
+      const vehicleExpenses = monthlyTransactions
+        .filter((t) => t.type === "expense" && t.vehicle_id === vehicle.id && t.status === "efetivado")
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      totalExpenses += vehicleExpenses;
+    });
+
+    return totalKmDriven > 0 ? totalExpenses / totalKmDriven : 0;
+  };
+
+  const costPerKm = calculateCostPerKm();
 
   // Calculate previous month for comparison
   const prevMonthTransactions = userTransactions.filter((t) => {
@@ -249,7 +293,17 @@ const DashboardNew = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-success">R$ {monthlyIncome.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="space-y-1 mt-2">
+                <p className="text-xs text-muted-foreground flex justify-between">
+                  <span>Programado:</span>
+                  <span className="text-amber-500 font-medium">R$ {scheduledIncome.toFixed(2)}</span>
+                </p>
+                <p className="text-xs text-muted-foreground flex justify-between">
+                  <span>Recebido:</span>
+                  <span className="text-success font-medium">R$ {receivedIncome.toFixed(2)}</span>
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
                 {Number(incomeChange) >= 0 ? "+" : ""}
                 {incomeChange}% em relação ao mês anterior
               </p>
@@ -263,7 +317,17 @@ const DashboardNew = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">R$ {monthlyExpenses.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="space-y-1 mt-2">
+                <p className="text-xs text-muted-foreground flex justify-between">
+                  <span>Programado:</span>
+                  <span className="text-amber-500 font-medium">R$ {scheduledExpenses.toFixed(2)}</span>
+                </p>
+                <p className="text-xs text-muted-foreground flex justify-between">
+                  <span>Efetivado:</span>
+                  <span className="text-destructive font-medium">R$ {paidExpenses.toFixed(2)}</span>
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
                 {Number(expensesChange) >= 0 ? "+" : ""}
                 {expensesChange}% em relação ao mês anterior
               </p>
@@ -272,14 +336,14 @@ const DashboardNew = () => {
 
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Resultado Mensal</CardTitle>
-              <DollarSign className={`w-4 h-4 ${monthlyBalance >= 0 ? "text-success" : "text-destructive"}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">Custo Médio por Km</CardTitle>
+              <DollarSign className="w-4 h-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${monthlyBalance >= 0 ? "text-success" : "text-destructive"}`}>
-                R$ {monthlyBalance.toFixed(2)}
+              <div className="text-2xl font-bold text-primary">
+                R$ {costPerKm > 0 ? costPerKm.toFixed(2) : "0.00"}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Receitas - Despesas</p>
+              <p className="text-xs text-muted-foreground mt-1">Despesas efetivadas / Km rodado</p>
             </CardContent>
           </Card>
 
@@ -302,21 +366,32 @@ const DashboardNew = () => {
             <CardHeader>
               <CardTitle>Evolução Mensal (Últimos 6 Meses)</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <ChartContainer
                 config={{
                   receitas: { label: "Receitas", color: "hsl(var(--success))" },
                   despesas: { label: "Despesas", color: "hsl(var(--destructive))" },
                 }}
-                className="h-[300px]"
+                className="h-[300px] w-full min-w-[300px]"
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={last6MonthsData}>
+                  <BarChart data={last6MonthsData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      tick={{ fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))" 
+                      tick={{ fontSize: 12 }}
+                      width={60}
+                    />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Bar dataKey="receitas" fill="hsl(var(--success))" name="Receitas" />
                     <Bar dataKey="despesas" fill="hsl(var(--destructive))" name="Despesas" />
                   </BarChart>

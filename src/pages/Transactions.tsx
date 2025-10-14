@@ -24,6 +24,7 @@ const transactionSchema = z.object({
   description: z.string().trim().max(200, "Descrição muito longa"),
   date: z.string().min(1, "Data é obrigatória"),
   paymentMethod: z.string().min(1, "Selecione a forma de pagamento"),
+  status: z.string().min(1, "Selecione o status"),
 });
 
 const Transactions = () => {
@@ -89,6 +90,7 @@ const Transactions = () => {
         description: formData.get("description"),
         date: formData.get("date"),
         paymentMethod: formData.get("paymentMethod"),
+        status: formData.get("status"),
       });
 
       const { error } = await supabase
@@ -102,6 +104,7 @@ const Transactions = () => {
           date: data.date,
           type: transactionType,
           payment_method: data.paymentMethod,
+          status: data.status,
         }]);
 
       if (error) throw error;
@@ -313,6 +316,19 @@ const Transactions = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select name="status" required defaultValue="efetivado">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="programado">Programado</SelectItem>
+                      <SelectItem value="efetivado">Efetivado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="description">Descrição (opcional)</Label>
                   <Textarea id="description" name="description" placeholder="Ex: Frete para São Paulo" />
                 </div>
@@ -371,6 +387,14 @@ const Transactions = () => {
                               <>
                                 <span>•</span>
                                 <span>{transaction.payment_method}</span>
+                              </>
+                            )}
+                            {transaction.status && (
+                              <>
+                                <span>•</span>
+                                <span className={transaction.status === "programado" ? "text-amber-500" : "text-success"}>
+                                  {transaction.status === "programado" ? "Programado" : "Efetivado"}
+                                </span>
                               </>
                             )}
                           </div>
