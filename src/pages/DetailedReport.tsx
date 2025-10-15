@@ -390,9 +390,9 @@ const DetailedReport = () => {
             </div>
 
           {expensesByVehicle.length > 0 && (
-            <div className="overflow-x-hidden">
-              <h3 className="text-lg font-semibold mb-3">Despesas por Veículo</h3>
-              <ChartContainer config={{}} className="h-[280px] w-full">
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold mb-3">Despesas por Veículo</h3>
+              <ChartContainer config={{}} className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -401,7 +401,7 @@ const DetailedReport = () => {
                       cy="50%"
                       labelLine={false}
                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={100}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -409,33 +409,66 @@ const DetailedReport = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </div>
           )}
 
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-3">Resumo Geral</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Total de Transações</p>
-                <p className="text-xl font-bold">{filteredTransactions.length}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Abastecimentos</p>
-                <p className="text-xl font-bold">{filteredFuelings.length}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Km Rodados</p>
-                <p className="text-xl font-bold">{totalKmDriven.toLocaleString("pt-BR")}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Custo/Km</p>
-                <p className="text-xl font-bold">
-                  {totalKmDriven > 0 ? formatCurrency(paidExpenses / totalKmDriven) : formatCurrency(0)}
+          <div className="border-t pt-4 mt-6">
+            <h3 className="text-lg font-bold mb-4">Resumo Geral</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Total Receitas:</span>
+                  <span className="font-semibold text-success">{formatCurrency(totalIncome)}</span>
                 </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Receitas Programadas:</span>
+                  <span className="font-medium text-amber-600">{formatCurrency(scheduledIncome)}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Receitas Efetivadas:</span>
+                  <span className="font-medium text-success">{formatCurrency(receivedIncome)}</span>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Total Despesas:</span>
+                  <span className="font-semibold text-destructive">{formatCurrency(totalExpenses)}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Despesas Programadas:</span>
+                  <span className="font-medium text-amber-600">{formatCurrency(scheduledExpenses)}</span>
+                </p>
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Despesas Efetivadas:</span>
+                  <span className="font-medium text-destructive">{formatCurrency(paidExpenses)}</span>
+                </p>
+              </div>
+              <div className="col-span-full border-t pt-2 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <p className="flex justify-between text-base">
+                    <span className="font-semibold">Saldo Final:</span>
+                    <span className={`font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
+                      {formatCurrency(balance)}
+                    </span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-muted-foreground">Km Rodados:</span>
+                    <span className="font-medium">{totalKmDriven.toLocaleString("pt-BR")} km</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-muted-foreground">Total Transações:</span>
+                    <span className="font-medium">{filteredTransactions.length}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span className="text-muted-foreground">Custo/Km:</span>
+                    <span className="font-medium">
+                      {totalKmDriven > 0 ? formatCurrency(paidExpenses / totalKmDriven) : formatCurrency(0)}
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
