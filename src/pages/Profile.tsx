@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Phone, Lock, User } from "lucide-react";
+import { Phone, Lock, User, CreditCard } from "lucide-react";
 import { z } from "zod";
 import Layout from "@/components/Layout";
+import type { Plan } from "@/types";
+import { formatCurrency } from "@/lib/formatters";
 
 const passwordSchema = z.object({
   newPassword: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
@@ -27,6 +30,8 @@ const Profile = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<string>("");
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -38,12 +43,22 @@ const Profile = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
+    const fetchPlans = async () => {
+      const { data } = await supabase.from("plans").select("*").order("quantity", { ascending: true });
+      if (data) {
+        setPlans(data);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("name, phone")
+        .select("name, phone, plan_id")
         .eq("id", user.id)
         .single();
 
@@ -52,6 +67,7 @@ const Profile = () => {
       } else if (data) {
         setName(data.name || "");
         setPhone(data.phone || "");
+        setSelectedPlan(data.plan_id || "");
       }
     };
 
@@ -185,6 +201,39 @@ const Profile = () => {
     }
   };
 
+  const handleUpdatePlan = async () => {
+    if (!user || !selectedPlan) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ plan_id: selectedPlan })
+        .eq("id", user.id);
+
+      if (error) {
+        toast({
+          title: "Erro ao atualizar plano",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Plano atualizado!",
+          description: "Seu plano foi atualizado com sucesso.",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao atualizar o plano.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const openWhatsApp = () => {
     if (!phone) {
       toast({
@@ -239,6 +288,38 @@ const Profile = () => {
                 {isLoading ? "Salvando..." : "Salvar Nome"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Plano
+            </CardTitle>
+            <CardDescription>Selecione o plano desejado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="plan">Escolha seu plano</Label>
+                <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.description} - {plan.quantity} veículo{plan.quantity > 1 ? "s" : ""} - {formatCurrency(plan.value)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleUpdatePlan} disabled={isLoading || !selectedPlan}>
+                {isLoading ? "Salvando..." : "Salvar Plano"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

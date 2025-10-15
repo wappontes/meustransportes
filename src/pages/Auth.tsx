@@ -22,28 +22,15 @@ const signupSchema = z.object({
   name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres"),
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
-  planId: z.string().min(1, "Selecione um plano"),
 });
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<string>("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch plans
-    const fetchPlans = async () => {
-      const { data } = await supabase.from("plans").select("*").order("quantity", { ascending: true });
-      if (data) {
-        setPlans(data);
-        if (data.length > 0) setSelectedPlan(data[0].id);
-      }
-    };
-    fetchPlans();
-
     // Check if user is already logged in
     const {
       data: { subscription },
@@ -117,7 +104,7 @@ const Auth = () => {
 
     try {
       // Validate input
-      signupSchema.parse({ name, email, password, planId: selectedPlan });
+      signupSchema.parse({ name, email, password });
 
       const redirectUrl = `${window.location.origin}/dashboard`;
 
@@ -128,7 +115,6 @@ const Auth = () => {
           emailRedirectTo: redirectUrl,
           data: {
             name: name,
-            plan_id: selectedPlan,
           },
         },
       });
@@ -248,21 +234,6 @@ const Auth = () => {
                     required
                     minLength={6}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="plan">Plano</Label>
-                  <Select value={selectedPlan} onValueChange={setSelectedPlan} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.description} - {plan.quantity} veículo{plan.quantity > 1 ? "s" : ""} - {formatCurrency(plan.value)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Cadastrando..." : "Criar Conta"}

@@ -163,24 +163,37 @@ const DetailedReport = () => {
         logging: false,
         width: 800,
         windowWidth: 800,
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-report-content]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.breakInside = 'avoid';
+            const charts = clonedElement.querySelectorAll('[data-chart-section]');
+            charts.forEach((chart) => {
+              (chart as HTMLElement).style.breakInside = 'avoid';
+              (chart as HTMLElement).style.pageBreakInside = 'avoid';
+            });
+          }
+        }
       });
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 190;
-      const pageHeight = 277;
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = pdfWidth - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
       let heightLeft = imgHeight;
       let position = 10;
 
       pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      heightLeft -= (pdfHeight - 20);
 
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10;
+      while (heightLeft > 0) {
+        position = -(pdfHeight - 20) * Math.ceil((imgHeight - heightLeft) / (pdfHeight - 20)) + 10;
         pdf.addPage();
         pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        heightLeft -= (pdfHeight - 20);
       }
 
       pdf.save(`relatorio-${startDate}-a-${endDate}.pdf`);
@@ -245,7 +258,7 @@ const DetailedReport = () => {
           </CardContent>
         </Card>
 
-          <div ref={reportRef} className="space-y-4 bg-white p-6 rounded-lg max-w-[800px] mx-auto text-gray-900">
+          <div ref={reportRef} data-report-content className="space-y-4 bg-white p-6 rounded-lg max-w-[800px] mx-auto text-gray-900">
             <div className="text-center border-b border-gray-300 pb-3">
               <h2 className="text-xl font-bold text-gray-900">Relatório Financeiro Detalhado</h2>
               <p className="text-sm text-gray-600">
@@ -342,7 +355,7 @@ const DetailedReport = () => {
 
             <div className="grid grid-cols-1 gap-4">
               {expensesByCategory.length > 0 && (
-                <div>
+                <div data-chart-section className="break-inside-avoid">
                   <h3 className="text-sm font-semibold mb-2 text-gray-900">Despesas por Categoria</h3>
                   <div className="w-full h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -360,7 +373,7 @@ const DetailedReport = () => {
               )}
 
               {incomeByCategory.length > 0 && (
-                <div>
+                <div data-chart-section className="break-inside-avoid">
                   <h3 className="text-sm font-semibold mb-2 text-gray-900">Receitas por Categoria</h3>
                   <div className="w-full h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -379,7 +392,7 @@ const DetailedReport = () => {
             </div>
 
           {expensesByVehicle.length > 0 && (
-            <div>
+            <div data-chart-section className="break-inside-avoid">
               <h3 className="text-sm font-semibold mb-2 text-gray-900">Despesas por Veículo</h3>
               <div className="w-full h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
