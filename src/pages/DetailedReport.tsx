@@ -228,7 +228,7 @@ const DetailedReport = () => {
           </CardContent>
         </Card>
 
-          <div className="space-y-6 bg-background p-6 rounded-lg max-w-full">
+          <div ref={reportRef} className="space-y-6 bg-background p-6 rounded-lg max-w-full">
             <div className="text-center border-b pb-4">
               <h2 className="text-2xl font-bold">Relatório Financeiro Detalhado</h2>
               <p className="text-muted-foreground">
