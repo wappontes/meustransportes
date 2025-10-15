@@ -157,15 +157,32 @@ const DetailedReport = () => {
 
     setExporting(true);
     try {
-      const pdf = new jsPDF("p", "mm", "a4");
-      await pdf.html(reportRef.current, {
-        x: 10,
-        y: 10,
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        margin: [10, 10, 10, 10],
-        windowWidth: reportRef.current.scrollWidth,
-        autoPaging: "text",
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: 800,
+        windowWidth: 800,
       });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 190;
+      const pageHeight = 277;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 10;
+
+      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight + 10;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`relatorio-${startDate}-a-${endDate}.pdf`);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -228,59 +245,47 @@ const DetailedReport = () => {
           </CardContent>
         </Card>
 
-          <div ref={reportRef} className="space-y-6 bg-background p-6 rounded-lg max-w-full">
-            <div className="text-center border-b pb-4">
-              <h2 className="text-2xl font-bold">Relatório Financeiro Detalhado</h2>
-              <p className="text-muted-foreground">
+          <div ref={reportRef} className="space-y-4 bg-white p-6 rounded-lg max-w-[800px] mx-auto text-gray-900">
+            <div className="text-center border-b border-gray-300 pb-3">
+              <h2 className="text-xl font-bold text-gray-900">Relatório Financeiro Detalhado</h2>
+              <p className="text-sm text-gray-600">
                 Período: {format(new Date(startDate), "dd/MM/yyyy", { locale: ptBR })} até{" "}
                 {format(new Date(endDate), "dd/MM/yyyy", { locale: ptBR })}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Total Receitas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold text-success">{formatCurrency(totalIncome)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Programado: {formatCurrency(scheduledIncome)} | Recebido: {formatCurrency(receivedIncome)}
-                  </p>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="border border-gray-200 rounded p-3 bg-white">
+                <div className="text-xs font-medium text-gray-600 mb-1">Total Receitas</div>
+                <div className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</div>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Prog: {formatCurrency(scheduledIncome)} | Rec: {formatCurrency(receivedIncome)}
+                </p>
+              </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Total Despesas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(totalExpenses)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Programado: {formatCurrency(scheduledExpenses)} | Efetivado: {formatCurrency(paidExpenses)}
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="border border-gray-200 rounded p-3 bg-white">
+                <div className="text-xs font-medium text-gray-600 mb-1">Total Despesas</div>
+                <div className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Prog: {formatCurrency(scheduledExpenses)} | Efet: {formatCurrency(paidExpenses)}
+                </p>
+              </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Saldo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-xl sm:text-2xl font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
-                    {formatCurrency(balance)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Km Rodados: {totalKmDriven.toLocaleString("pt-BR")}</p>
-                </CardContent>
-              </Card>
+              <div className="border border-gray-200 rounded p-3 bg-white">
+                <div className="text-xs font-medium text-gray-600 mb-1">Saldo</div>
+                <div className={`text-lg font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {formatCurrency(balance)}
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">Km: {totalKmDriven.toLocaleString("pt-BR")}</p>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <h3 className="text-base sm:text-lg font-semibold mb-3 text-success">
+                <h3 className="text-sm font-semibold mb-2 text-green-700">
                   Receitas ({filteredTransactions.filter((t) => t.type === "income").length})
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {filteredTransactions
                     .filter((t) => t.type === "income")
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -288,17 +293,17 @@ const DetailedReport = () => {
                       const category = categories.find((c) => c.id === tx.category_id);
                       const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
                       return (
-                        <div key={tx.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3 bg-muted rounded-lg text-sm">
-                          <div className="flex-1">
-                            <p className="font-medium">{tx.description}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <div key={tx.id} className="flex justify-between items-start gap-2 p-2 bg-gray-50 rounded text-xs border border-gray-200">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{tx.description}</p>
+                            <p className="text-[10px] text-gray-600">
                               {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
-                              <span className={tx.status === "efetivado" ? "text-success" : "text-amber-500"}>
-                                {tx.status === "efetivado" ? "Efetivado" : "Programado"}
+                              <span className={tx.status === "efetivado" ? "text-green-600" : "text-amber-600"}>
+                                {tx.status === "efetivado" ? "Efet." : "Prog."}
                               </span>
                             </p>
                           </div>
-                          <div className="font-bold text-success">{formatCurrency(tx.amount)}</div>
+                          <div className="font-bold text-green-600 whitespace-nowrap">{formatCurrency(tx.amount)}</div>
                         </div>
                       );
                     })}
@@ -306,10 +311,10 @@ const DetailedReport = () => {
               </div>
 
               <div>
-                <h3 className="text-base sm:text-lg font-semibold mb-3 text-destructive">
+                <h3 className="text-sm font-semibold mb-2 text-red-700">
                   Despesas ({filteredTransactions.filter((t) => t.type === "expense").length})
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {filteredTransactions
                     .filter((t) => t.type === "expense")
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -317,17 +322,17 @@ const DetailedReport = () => {
                       const category = categories.find((c) => c.id === tx.category_id);
                       const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
                       return (
-                        <div key={tx.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3 bg-muted rounded-lg text-sm">
-                          <div className="flex-1">
-                            <p className="font-medium">{tx.description}</p>
-                            <p className="text-xs text-muted-foreground">
+                        <div key={tx.id} className="flex justify-between items-start gap-2 p-2 bg-gray-50 rounded text-xs border border-gray-200">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{tx.description}</p>
+                            <p className="text-[10px] text-gray-600">
                               {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
-                              <span className={tx.status === "efetivado" ? "text-destructive" : "text-amber-500"}>
-                                {tx.status === "efetivado" ? "Efetivado" : "Programado"}
+                              <span className={tx.status === "efetivado" ? "text-red-600" : "text-amber-600"}>
+                                {tx.status === "efetivado" ? "Efet." : "Prog."}
                               </span>
                             </p>
                           </div>
-                          <div className="font-bold text-destructive">{formatCurrency(tx.amount)}</div>
+                          <div className="font-bold text-red-600 whitespace-nowrap">{formatCurrency(tx.amount)}</div>
                         </div>
                       );
                     })}
@@ -335,55 +340,39 @@ const DetailedReport = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
               {expensesByCategory.length > 0 && (
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">Despesas por Categoria</h3>
-                  <div className="w-full">
-                    <ChartContainer
-                      config={{
-                        programado: { label: "Programado", color: "#F59E0B" },
-                        efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
-                      }}
-                      className="h-[300px] w-full"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" />
-                          <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
-                          <Legend />
-                          <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
-                          <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
+                  <h3 className="text-sm font-semibold mb-2 text-gray-900">Despesas por Categoria</h3>
+                  <div className="w-full h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis type="number" tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 9 }} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Prog." />
+                        <Bar dataKey="efetivado" stackId="a" fill="#DC2626" name="Efet." />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )}
 
               {incomeByCategory.length > 0 && (
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">Receitas por Categoria</h3>
-                  <div className="w-full">
-                    <ChartContainer
-                      config={{
-                        programado: { label: "Programado", color: "#F59E0B" },
-                        efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
-                      }}
-                      className="h-[300px] w-full"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" />
-                          <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
-                          <Legend />
-                          <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
-                          <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
+                  <h3 className="text-sm font-semibold mb-2 text-gray-900">Receitas por Categoria</h3>
+                  <div className="w-full h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis type="number" tick={{ fontSize: 10 }} />
+                        <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 9 }} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
+                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Prog." />
+                        <Bar dataKey="efetivado" stackId="a" fill="#10B981" name="Efet." />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )}
@@ -391,8 +380,8 @@ const DetailedReport = () => {
 
           {expensesByVehicle.length > 0 && (
             <div>
-              <h3 className="text-base sm:text-lg font-semibold mb-3">Despesas por Veículo</h3>
-              <ChartContainer config={{}} className="h-[300px] w-full">
+              <h3 className="text-sm font-semibold mb-2 text-gray-900">Despesas por Veículo</h3>
+              <div className="w-full h-[200px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -401,9 +390,10 @@ const DetailedReport = () => {
                       cy="50%"
                       labelLine={false}
                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={90}
+                      outerRadius={70}
                       fill="#8884d8"
                       dataKey="value"
+                      style={{ fontSize: 10 }}
                     >
                       {expensesByVehicle.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -411,60 +401,60 @@ const DetailedReport = () => {
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
-              </ChartContainer>
+              </div>
             </div>
           )}
 
-          <div className="border-t pt-4 mt-6">
-            <h3 className="text-lg font-bold mb-4">Resumo Geral</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
+          <div className="border-t border-gray-300 pt-3 mt-4">
+            <h3 className="text-sm font-bold mb-2 text-gray-900">Resumo Geral</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="space-y-1">
                 <p className="flex justify-between">
-                  <span className="text-muted-foreground">Total Receitas:</span>
-                  <span className="font-semibold text-success">{formatCurrency(totalIncome)}</span>
+                  <span className="text-gray-600">Total Receitas:</span>
+                  <span className="font-semibold text-green-600">{formatCurrency(totalIncome)}</span>
                 </p>
                 <p className="flex justify-between">
-                  <span className="text-muted-foreground">Receitas Programadas:</span>
+                  <span className="text-gray-600">Rec. Programadas:</span>
                   <span className="font-medium text-amber-600">{formatCurrency(scheduledIncome)}</span>
                 </p>
                 <p className="flex justify-between">
-                  <span className="text-muted-foreground">Receitas Efetivadas:</span>
-                  <span className="font-medium text-success">{formatCurrency(receivedIncome)}</span>
+                  <span className="text-gray-600">Rec. Efetivadas:</span>
+                  <span className="font-medium text-green-600">{formatCurrency(receivedIncome)}</span>
                 </p>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <p className="flex justify-between">
-                  <span className="text-muted-foreground">Total Despesas:</span>
-                  <span className="font-semibold text-destructive">{formatCurrency(totalExpenses)}</span>
+                  <span className="text-gray-600">Total Despesas:</span>
+                  <span className="font-semibold text-red-600">{formatCurrency(totalExpenses)}</span>
                 </p>
                 <p className="flex justify-between">
-                  <span className="text-muted-foreground">Despesas Programadas:</span>
+                  <span className="text-gray-600">Desp. Programadas:</span>
                   <span className="font-medium text-amber-600">{formatCurrency(scheduledExpenses)}</span>
                 </p>
                 <p className="flex justify-between">
-                  <span className="text-muted-foreground">Despesas Efetivadas:</span>
-                  <span className="font-medium text-destructive">{formatCurrency(paidExpenses)}</span>
+                  <span className="text-gray-600">Desp. Efetivadas:</span>
+                  <span className="font-medium text-red-600">{formatCurrency(paidExpenses)}</span>
                 </p>
               </div>
-              <div className="col-span-full border-t pt-2 mt-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <p className="flex justify-between text-base">
-                    <span className="font-semibold">Saldo Final:</span>
-                    <span className={`font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
+              <div className="col-span-2 border-t border-gray-200 pt-2 mt-1">
+                <div className="grid grid-cols-2 gap-1">
+                  <p className="flex justify-between">
+                    <span className="font-semibold text-gray-900">Saldo Final:</span>
+                    <span className={`font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
                       {formatCurrency(balance)}
                     </span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-muted-foreground">Km Rodados:</span>
-                    <span className="font-medium">{totalKmDriven.toLocaleString("pt-BR")} km</span>
+                    <span className="text-gray-600">Km Rodados:</span>
+                    <span className="font-medium text-gray-900">{totalKmDriven.toLocaleString("pt-BR")} km</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-muted-foreground">Total Transações:</span>
-                    <span className="font-medium">{filteredTransactions.length}</span>
+                    <span className="text-gray-600">Total Transações:</span>
+                    <span className="font-medium text-gray-900">{filteredTransactions.length}</span>
                   </p>
                   <p className="flex justify-between">
-                    <span className="text-muted-foreground">Custo/Km:</span>
-                    <span className="font-medium">
+                    <span className="text-gray-600">Custo/Km:</span>
+                    <span className="font-medium text-gray-900">
                       {totalKmDriven > 0 ? formatCurrency(paidExpenses / totalKmDriven) : formatCurrency(0)}
                     </span>
                   </p>
