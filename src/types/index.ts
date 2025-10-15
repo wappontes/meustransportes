@@ -40,3 +40,17 @@ export interface Fueling {
   date: string;
   createdAt: string;
 }
+
+export interface Plan {
+  id: string;
+  description: string;
+  quantity: number;
+  value: number;
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  name: string;
+  plan_id: string;
+}

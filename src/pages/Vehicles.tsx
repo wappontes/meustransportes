@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Car, Trash2, Edit } from "lucide-react";
+import { Plus, Car, Trash2, Edit, AlertCircle } from "lucide-react";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import type { Plan } from "@/types";
 
 const vehicleSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100),
@@ -28,6 +30,8 @@ const Vehicles = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userPlan, setUserPlan] = useState<Plan | null>(null);
+  const [canAddVehicle, setCanAddVehicle] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -35,23 +39,44 @@ const Vehicles = () => {
       return;
     }
     if (user) {
-      fetchVehicles();
+      fetchVehiclesAndPlan();
     }
   }, [user, authLoading, navigate]);
 
-  const fetchVehicles = async () => {
+  const fetchVehiclesAndPlan = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch vehicles
+      const { data: vehiclesData, error: vehiclesError } = await supabase
         .from("vehicles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setVehicles(data || []);
+      if (vehiclesError) throw vehiclesError;
+      setVehicles(vehiclesData || []);
+
+      // Fetch user's plan
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("plan_id")
+        .eq("id", user!.id)
+        .single();
+
+      if (profile?.plan_id) {
+        const { data: plan } = await supabase
+          .from("plans")
+          .select("*")
+          .eq("id", profile.plan_id)
+          .single();
+
+        if (plan) {
+          setUserPlan(plan);
+          setCanAddVehicle((vehiclesData?.length || 0) < plan.quantity);
+        }
+      }
     } catch (error) {
-      console.error("Error fetching vehicles:", error);
+      console.error("Error fetching data:", error);
       toast({
-        title: "Erro ao carregar veículos",
+        title: "Erro ao carregar dados",
         description: "Tente novamente mais tarde",
         variant: "destructive",
       });
@@ -82,6 +107,16 @@ const Vehicles = () => {
         if (error) throw error;
         toast({ title: "Veículo atualizado com sucesso!" });
       } else {
+        // Check plan limit before adding
+        if (!canAddVehicle && userPlan) {
+          toast({
+            title: "Limite de veículos atingido",
+            description: `Seu plano ${userPlan.description} permite apenas ${userPlan.quantity} veículo${userPlan.quantity > 1 ? "s" : ""}. Faça upgrade para adicionar mais veículos.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from("vehicles")
           .insert([{ ...data, user_id: user!.id }]);
@@ -93,7 +128,7 @@ const Vehicles = () => {
       setIsDialogOpen(false);
       setEditingVehicle(null);
       form.reset();
-      await fetchVehicles();
+      await fetchVehiclesAndPlan();
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
@@ -121,7 +156,7 @@ const Vehicles = () => {
 
       if (error) throw error;
       toast({ title: "Veículo removido com sucesso!" });
-      await fetchVehicles();
+      await fetchVehiclesAndPlan();
     } catch (error) {
       console.error("Error deleting vehicle:", error);
       toast({
@@ -154,7 +189,7 @@ const Vehicles = () => {
             if (!open) setEditingVehicle(null);
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={!canAddVehicle && !editingVehicle}>
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar Veículo
               </Button>
@@ -198,6 +233,16 @@ const Vehicles = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        {!canAddVehicle && userPlan && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Você atingiu o limite de {userPlan.quantity} veículo{userPlan.quantity > 1 ? "s" : ""} do seu plano {userPlan.description}. 
+              Para adicionar mais veículos, faça upgrade do seu plano.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {vehicles.length === 0 ? (
           <Card>

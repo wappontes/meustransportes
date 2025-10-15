@@ -228,166 +228,166 @@ const DetailedReport = () => {
           </CardContent>
         </Card>
 
-        <div ref={reportRef} className="space-y-6 bg-background p-4 sm:p-6 rounded-lg max-w-full overflow-hidden">
-          <div className="text-center border-b pb-4">
-            <h2 className="text-2xl font-bold">Relatório Financeiro Detalhado</h2>
-            <p className="text-muted-foreground">
-              Período: {format(new Date(startDate), "dd/MM/yyyy", { locale: ptBR })} até{" "}
-              {format(new Date(endDate), "dd/MM/yyyy", { locale: ptBR })}
-            </p>
-          </div>
+          <div className="space-y-6 bg-background p-6 rounded-lg max-w-full">
+            <div className="text-center border-b pb-4">
+              <h2 className="text-2xl font-bold">Relatório Financeiro Detalhado</h2>
+              <p className="text-muted-foreground">
+                Período: {format(new Date(startDate), "dd/MM/yyyy", { locale: ptBR })} até{" "}
+                {format(new Date(endDate), "dd/MM/yyyy", { locale: ptBR })}
+              </p>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Total Receitas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-success">{formatCurrency(totalIncome)}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Programado: {formatCurrency(scheduledIncome)} | Recebido: {formatCurrency(receivedIncome)}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Total Receitas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold text-success">{formatCurrency(totalIncome)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Programado: {formatCurrency(scheduledIncome)} | Recebido: {formatCurrency(receivedIncome)}
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Total Despesas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-destructive">{formatCurrency(totalExpenses)}</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Programado: {formatCurrency(scheduledExpenses)} | Efetivado: {formatCurrency(paidExpenses)}
-                </p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Total Despesas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(totalExpenses)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Programado: {formatCurrency(scheduledExpenses)} | Efetivado: {formatCurrency(paidExpenses)}
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Saldo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
-                  {formatCurrency(balance)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">Km Rodados: {totalKmDriven.toLocaleString("pt-BR")}</p>
-              </CardContent>
-            </Card>
-          </div>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Saldo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-xl sm:text-2xl font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
+                    {formatCurrency(balance)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Km Rodados: {totalKmDriven.toLocaleString("pt-BR")}</p>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-success">
-                Receitas ({filteredTransactions.filter((t) => t.type === "income").length})
-              </h3>
-              <div className="space-y-2">
-                {filteredTransactions
-                  .filter((t) => t.type === "income")
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((tx) => {
-                    const category = categories.find((c) => c.id === tx.category_id);
-                    const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
-                    return (
-                      <div key={tx.id} className="flex justify-between items-center p-3 bg-muted rounded-lg text-sm">
-                        <div className="flex-1">
-                          <p className="font-medium">{tx.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
-                            <span className={tx.status === "efetivado" ? "text-success" : "text-amber-500"}>
-                              {tx.status === "efetivado" ? "Efetivado" : "Programado"}
-                            </span>
-                          </p>
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold mb-3 text-success">
+                  Receitas ({filteredTransactions.filter((t) => t.type === "income").length})
+                </h3>
+                <div className="space-y-2">
+                  {filteredTransactions
+                    .filter((t) => t.type === "income")
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((tx) => {
+                      const category = categories.find((c) => c.id === tx.category_id);
+                      const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
+                      return (
+                        <div key={tx.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3 bg-muted rounded-lg text-sm">
+                          <div className="flex-1">
+                            <p className="font-medium">{tx.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
+                              <span className={tx.status === "efetivado" ? "text-success" : "text-amber-500"}>
+                                {tx.status === "efetivado" ? "Efetivado" : "Programado"}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="font-bold text-success">{formatCurrency(tx.amount)}</div>
                         </div>
-                        <div className="font-bold text-success">{formatCurrency(tx.amount)}</div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold mb-3 text-destructive">
+                  Despesas ({filteredTransactions.filter((t) => t.type === "expense").length})
+                </h3>
+                <div className="space-y-2">
+                  {filteredTransactions
+                    .filter((t) => t.type === "expense")
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((tx) => {
+                      const category = categories.find((c) => c.id === tx.category_id);
+                      const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
+                      return (
+                        <div key={tx.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 p-3 bg-muted rounded-lg text-sm">
+                          <div className="flex-1">
+                            <p className="font-medium">{tx.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
+                              <span className={tx.status === "efetivado" ? "text-destructive" : "text-amber-500"}>
+                                {tx.status === "efetivado" ? "Efetivado" : "Programado"}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="font-bold text-destructive">{formatCurrency(tx.amount)}</div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold mb-3 text-destructive">
-                Despesas ({filteredTransactions.filter((t) => t.type === "expense").length})
-              </h3>
-              <div className="space-y-2">
-                {filteredTransactions
-                  .filter((t) => t.type === "expense")
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((tx) => {
-                    const category = categories.find((c) => c.id === tx.category_id);
-                    const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
-                    return (
-                      <div key={tx.id} className="flex justify-between items-center p-3 bg-muted rounded-lg text-sm">
-                        <div className="flex-1">
-                          <p className="font-medium">{tx.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
-                            <span className={tx.status === "efetivado" ? "text-destructive" : "text-amber-500"}>
-                              {tx.status === "efetivado" ? "Efetivado" : "Programado"}
-                            </span>
-                          </p>
-                        </div>
-                        <div className="font-bold text-destructive">{formatCurrency(tx.amount)}</div>
-                      </div>
-                    );
-                  })}
-              </div>
+            <div className="grid grid-cols-1 gap-6">
+              {expensesByCategory.length > 0 && (
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold mb-3">Despesas por Categoria</h3>
+                  <div className="w-full">
+                    <ChartContainer
+                      config={{
+                        programado: { label: "Programado", color: "#F59E0B" },
+                        efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
+                      }}
+                      className="h-[300px] w-full"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
+                          <Legend />
+                          <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
+                          <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
+                </div>
+              )}
+
+              {incomeByCategory.length > 0 && (
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold mb-3">Receitas por Categoria</h3>
+                  <div className="w-full">
+                    <ChartContainer
+                      config={{
+                        programado: { label: "Programado", color: "#F59E0B" },
+                        efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
+                      }}
+                      className="h-[300px] w-full"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
+                          <Legend />
+                          <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
+                          <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {expensesByCategory.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Despesas por Categoria</h3>
-                <div className="overflow-x-auto -mx-2 sm:mx-0 px-2">
-                  <ChartContainer
-                    config={{
-                      programado: { label: "Programado", color: "#F59E0B" },
-                      efetivado: { label: "Efetivado", color: "hsl(var(--destructive))" },
-                    }}
-                    className="h-[260px] w-full min-w-[320px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
-                        <Legend />
-                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
-                        <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--destructive))" name="Efetivado" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </div>
-              </div>
-            )}
-
-            {incomeByCategory.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Receitas por Categoria</h3>
-                <div className="overflow-x-auto -mx-2 sm:mx-0 px-2">
-                  <ChartContainer
-                    config={{
-                      programado: { label: "Programado", color: "#F59E0B" },
-                      efetivado: { label: "Efetivado", color: "hsl(var(--success))" },
-                    }}
-                    className="h-[260px] w-full min-w-[320px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 11 }} />
-                        <Legend />
-                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Programado" />
-                        <Bar dataKey="efetivado" stackId="a" fill="hsl(var(--success))" name="Efetivado" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                </div>
-              </div>
-            )}
-          </div>
 
           {expensesByVehicle.length > 0 && (
             <div className="overflow-x-hidden">

@@ -1,8 +1,10 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Car, LogOut, LayoutDashboard, Fuel, Receipt, Tags, TrendingUp, User } from "lucide-react";
+import { Car, LogOut, LayoutDashboard, Fuel, Receipt, Tags, TrendingUp, User, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import type { Plan } from "@/types";
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,7 +14,32 @@ interface LayoutProps {
 const Layout = ({ children, userName }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const [userPlan, setUserPlan] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    const fetchUserPlan = async () => {
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("plan_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.plan_id) {
+        const { data: plan } = await supabase
+          .from("plans")
+          .select("*")
+          .eq("id", profile.plan_id)
+          .single();
+        
+        if (plan) setUserPlan(plan);
+      }
+    };
+
+    fetchUserPlan();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();
@@ -25,6 +52,7 @@ const Layout = ({ children, userName }: LayoutProps) => {
     { path: "/categories", icon: Tags, label: "Categorias" },
     { path: "/transactions", icon: TrendingUp, label: "Transações" },
     { path: "/fueling", icon: Fuel, label: "Abastecimento" },
+    { path: "/plans", icon: FileText, label: "Planos" },
     { path: "/profile", icon: User, label: "Perfil" },
   ];
 
@@ -38,7 +66,12 @@ const Layout = ({ children, userName }: LayoutProps) => {
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground">Meus Transportes</h1>
-              <p className="text-sm text-muted-foreground">Olá, {userName}</p>
+              <p className="text-sm text-muted-foreground">
+                Olá, {userName}
+                {userPlan && (
+                  <span className="ml-2 text-primary font-medium">| Plano: {userPlan.description}</span>
+                )}
+              </p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={handleLogout}>
