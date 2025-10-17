@@ -22,6 +22,7 @@ export default function DetailedReport() {
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [showExportPages, setShowExportPages] = useState(false);
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fuelings, setFuelings] = useState<Fueling[]>([]);
@@ -136,15 +137,22 @@ export default function DetailedReport() {
   const handleExportPDF = async () => {
     try {
       setExporting(true);
+      setShowExportPages(true);
+      
       toast({
         title: "Gerando PDF",
         description: "Por favor, aguarde...",
       });
 
+      // Wait for pages to render
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 300)));
+
       const pdf = new jsPDF("p", "mm", "a4");
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 10;
+      const maxW = pageWidth - 2 * margin;
+      const maxH = pageHeight - 2 * margin;
 
       const refs = [page1Ref, page2Ref, page3Ref, page4Ref, page5Ref, page6Ref];
       
@@ -153,6 +161,7 @@ export default function DetailedReport() {
         if (!element) continue;
 
         const canvas = await html2canvas(element, {
+          backgroundColor: "#fff",
           scale: 2,
           useCORS: true,
           logging: false,
@@ -161,14 +170,15 @@ export default function DetailedReport() {
         });
 
         const imgData = canvas.toDataURL("image/png");
-        const imgWidth = pageWidth - 2 * margin;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const imgWpx = canvas.width;
+        const imgHpx = canvas.height;
+        const ratio = Math.min(maxW / imgWpx, maxH / imgHpx);
 
         if (i > 0) {
           pdf.addPage();
         }
 
-        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, Math.min(imgHeight, pageHeight - 2 * margin));
+        pdf.addImage(imgData, "PNG", margin, margin, imgWpx * ratio, imgHpx * ratio);
       }
 
       pdf.save(`relatorio-detalhado-${new Date().toISOString().split("T")[0]}.pdf`);
@@ -179,12 +189,14 @@ export default function DetailedReport() {
       });
     } catch (error) {
       console.error("Error generating PDF:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao gerar PDF";
       toast({
         title: "Erro",
-        description: "Erro ao gerar PDF",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
+      setShowExportPages(false);
       setExporting(false);
     }
   };
@@ -201,7 +213,7 @@ export default function DetailedReport() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="py-4">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-4">Relatório Detalhado</h1>
           
@@ -251,7 +263,7 @@ export default function DetailedReport() {
         </div>
 
         {/* Hidden pages for PDF export */}
-        <div className="hidden">
+        <div className={showExportPages ? "fixed -left-[99999px] top-0 z-[-1]" : "hidden"} aria-hidden="true">
           {/* Page 1: Summary */}
           <div ref={page1Ref} className="w-[800px] bg-white p-8">
             <h1 className="text-2xl font-bold mb-6 text-gray-900">Relatório Financeiro Detalhado</h1>
@@ -300,7 +312,7 @@ export default function DetailedReport() {
             <div className="space-y-2">
               {filteredTransactions
                 .filter((t) => t.type === "income")
-                .slice(0, 15)
+                .slice(0, 10)
                 .map((transaction) => {
                   const category = categories.find((c) => c.id === transaction.categoryId);
                   const vehicle = vehicles.find((v) => v.id === transaction.vehicleId);
@@ -325,7 +337,7 @@ export default function DetailedReport() {
             <div className="space-y-2">
               {filteredTransactions
                 .filter((t) => t.type === "expense")
-                .slice(0, 15)
+                .slice(0, 10)
                 .map((transaction) => {
                   const category = categories.find((c) => c.id === transaction.categoryId);
                   const vehicle = vehicles.find((v) => v.id === transaction.vehicleId);
@@ -348,7 +360,7 @@ export default function DetailedReport() {
           <div ref={page4Ref} className="w-[800px] bg-white p-8">
             <h2 className="text-xl font-bold mb-4 text-gray-900">Despesas por Categoria</h2>
             {expensesByCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={expensesByCategory}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
@@ -366,7 +378,7 @@ export default function DetailedReport() {
           <div ref={page5Ref} className="w-[800px] bg-white p-8">
             <h2 className="text-xl font-bold mb-4 text-gray-900">Receitas por Categoria</h2>
             {incomeByCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
                     data={incomeByCategory}
@@ -394,7 +406,7 @@ export default function DetailedReport() {
           <div ref={page6Ref} className="w-[800px] bg-white p-8">
             <h2 className="text-xl font-bold mb-4 text-gray-900">Despesas por Veículo</h2>
             {expensesByVehicle.length > 0 ? (
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={expensesByVehicle}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
@@ -438,6 +450,154 @@ export default function DetailedReport() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Detailed Information on Screen */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* Income List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Receitas Recentes</CardTitle>
+              <CardDescription>Últimas 10 receitas do período</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {filteredTransactions
+                  .filter((t) => t.type === "income")
+                  .slice(0, 10)
+                  .map((transaction) => {
+                    const category = categories.find((c) => c.id === transaction.categoryId);
+                    const vehicle = vehicles.find((v) => v.id === transaction.vehicleId);
+                    return (
+                      <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{transaction.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {category?.name} • {vehicle?.name} • {new Date(transaction.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className="font-bold text-green-600">{formatCurrency(transaction.amount)}</span>
+                      </div>
+                    );
+                  })}
+                {filteredTransactions.filter((t) => t.type === "income").length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">Nenhuma receita encontrada no período</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Expense List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Despesas Recentes</CardTitle>
+              <CardDescription>Últimas 10 despesas do período</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {filteredTransactions
+                  .filter((t) => t.type === "expense")
+                  .slice(0, 10)
+                  .map((transaction) => {
+                    const category = categories.find((c) => c.id === transaction.categoryId);
+                    const vehicle = vehicles.find((v) => v.id === transaction.vehicleId);
+                    return (
+                      <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{transaction.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {category?.name} • {vehicle?.name} • {new Date(transaction.date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className="font-bold text-red-600">{formatCurrency(transaction.amount)}</span>
+                      </div>
+                    );
+                  })}
+                {filteredTransactions.filter((t) => t.type === "expense").length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">Nenhuma despesa encontrada no período</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {/* Expenses by Category Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Despesas por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {expensesByCategory.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={expensesByCategory}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Bar dataKey="value" fill="#ef4444" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">Nenhuma despesa encontrada</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Income by Category Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Receitas por Categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {incomeByCategory.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={incomeByCategory}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry) => entry.name}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {incomeByCategory.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">Nenhuma receita encontrada</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Expenses by Vehicle Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Despesas por Veículo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {expensesByVehicle.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={expensesByVehicle}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Bar dataKey="value" fill="#0088FE" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">Nenhuma despesa encontrada</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );
