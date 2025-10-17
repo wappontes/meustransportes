@@ -1,484 +1,444 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileDown, Loader2, ArrowLeft } from "lucide-react";
-import { format, isWithinInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { parseLocalDate } from "@/lib/dateUtils";
+import { Download, Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Transaction, Fueling, Vehicle, Category } from "@/types";
 import { formatCurrency } from "@/lib/formatters";
-import { ChartContainer } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-const DetailedReport = () => {
-  const navigate = useNavigate();
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+export default function DetailedReport() {
   const { user, loading: authLoading } = useAuth();
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    return format(date, "yyyy-MM-dd");
-  });
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [exporting, setExporting] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [fuelings, setFuelings] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const reportRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+  
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [fuelings, setFuelings] = useState<Fueling[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const page1Ref = useRef<HTMLDivElement>(null);
+  const page2Ref = useRef<HTMLDivElement>(null);
+  const page3Ref = useRef<HTMLDivElement>(null);
+  const page4Ref = useRef<HTMLDivElement>(null);
+  const page5Ref = useRef<HTMLDivElement>(null);
+  const page6Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/");
+      window.location.href = "/";
       return;
     }
+
     if (user) {
       fetchData();
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading]);
 
   const fetchData = async () => {
+    if (!user) return;
+
     try {
-      const [transactionsRes, fuelingsRes, vehiclesRes, categoriesRes] = await Promise.all([
-        supabase.from("transactions").select("*"),
-        supabase.from("fuelings").select("*"),
-        supabase.from("vehicles").select("*"),
-        supabase.from("categories").select("*"),
+      setLoading(true);
+
+      const [transactionsData, fuelingsData, vehiclesData, categoriesData] = await Promise.all([
+        supabase.from("transactions").select("*").eq("userId", user.id),
+        supabase.from("fuelings").select("*").eq("userId", user.id),
+        supabase.from("vehicles").select("*").eq("userId", user.id),
+        supabase.from("categories").select("*").eq("userId", user.id),
       ]);
 
-      if (transactionsRes.error) throw transactionsRes.error;
-      if (fuelingsRes.error) throw fuelingsRes.error;
-      if (vehiclesRes.error) throw vehiclesRes.error;
-      if (categoriesRes.error) throw categoriesRes.error;
-
-      setTransactions(transactionsRes.data || []);
-      setFuelings(fuelingsRes.data || []);
-      setVehicles(vehiclesRes.data || []);
-      setCategories(categoriesRes.data || []);
+      setTransactions(transactionsData.data || []);
+      setFuelings(fuelingsData.data || []);
+      setVehicles(vehiclesData.data || []);
+      setCategories(categoriesData.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados do relatório",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const filteredTransactions = transactions.filter((t) => {
-    const txDate = parseLocalDate(t.date);
-    return isWithinInterval(txDate, {
-      start: new Date(startDate),
-      end: new Date(endDate),
-    });
+    if (!startDate || !endDate) return true;
+    const transDate = new Date(t.date);
+    return transDate >= new Date(startDate) && transDate <= new Date(endDate);
   });
 
   const filteredFuelings = fuelings.filter((f) => {
-    const fDate = parseLocalDate(f.date);
-    return isWithinInterval(fDate, {
-      start: new Date(startDate),
-      end: new Date(endDate),
-    });
+    if (!startDate || !endDate) return true;
+    const fuelDate = new Date(f.date);
+    return fuelDate >= new Date(startDate) && fuelDate <= new Date(endDate);
   });
 
-  const totalIncome = filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
-  const balance = totalIncome - totalExpenses;
-
-  const scheduledIncome = filteredTransactions
-    .filter((t) => t.type === "income" && t.status === "programado")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const receivedIncome = filteredTransactions
-    .filter((t) => t.type === "income" && t.status === "efetivado")
+  const totalIncome = filteredTransactions
+    .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const scheduledExpenses = filteredTransactions
-    .filter((t) => t.type === "expense" && t.status === "programado")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const paidExpenses = filteredTransactions
-    .filter((t) => t.type === "expense" && t.status === "efetivado")
+  const totalExpenses = filteredTransactions
+    .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalKmDriven = vehicles.reduce((total, vehicle) => {
-    const vehicleFuelings = filteredFuelings
-      .filter((f) => f.vehicle_id === vehicle.id)
-      .sort((a, b) => a.odometer - b.odometer);
+  const totalFuelingExpenses = filteredFuelings.reduce((sum, f) => sum + f.totalAmount, 0);
+  const balance = totalIncome - (totalExpenses + totalFuelingExpenses);
 
-    if (vehicleFuelings.length >= 2) {
-      const kmDriven = vehicleFuelings[vehicleFuelings.length - 1].odometer - vehicleFuelings[0].odometer;
-      return total + kmDriven;
-    }
-    return total;
-  }, 0);
-
+  // Calcular despesas por categoria
   const expensesByCategory = categories
     .filter((c) => c.type === "expense")
-    .map((cat) => ({
-      name: cat.name,
-      programado: filteredTransactions
-        .filter((t) => t.type === "expense" && t.category_id === cat.id && t.status === "programado")
-        .reduce((sum, t) => sum + t.amount, 0),
-      efetivado: filteredTransactions
-        .filter((t) => t.type === "expense" && t.category_id === cat.id && t.status === "efetivado")
-        .reduce((sum, t) => sum + t.amount, 0),
-    }))
-    .filter((item) => item.programado > 0 || item.efetivado > 0);
-
-  const incomeByCategory = categories
-    .filter((c) => c.type === "income")
-    .map((cat) => ({
-      name: cat.name,
-      programado: filteredTransactions
-        .filter((t) => t.type === "income" && t.category_id === cat.id && t.status === "programado")
-        .reduce((sum, t) => sum + t.amount, 0),
-      efetivado: filteredTransactions
-        .filter((t) => t.type === "income" && t.category_id === cat.id && t.status === "efetivado")
-        .reduce((sum, t) => sum + t.amount, 0),
-    }))
-    .filter((item) => item.programado > 0 || item.efetivado > 0);
-
-  const expensesByVehicle = vehicles
-    .map((vehicle) => ({
-      name: vehicle.name,
-      value: filteredTransactions
-        .filter((t) => t.type === "expense" && t.vehicle_id === vehicle.id)
-        .reduce((sum, t) => sum + t.amount, 0),
-    }))
+    .map((category) => {
+      const total = filteredTransactions
+        .filter((t) => t.categoryId === category.id && t.type === "expense")
+        .reduce((sum, t) => sum + t.amount, 0);
+      return { name: category.name, value: total };
+    })
     .filter((item) => item.value > 0);
 
-  const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
+  // Calcular receitas por categoria
+  const incomeByCategory = categories
+    .filter((c) => c.type === "income")
+    .map((category) => {
+      const total = filteredTransactions
+        .filter((t) => t.categoryId === category.id && t.type === "income")
+        .reduce((sum, t) => sum + t.amount, 0);
+      return { name: category.name, value: total };
+    })
+    .filter((item) => item.value > 0);
+
+  // Calcular despesas por veículo
+  const expensesByVehicle = vehicles.map((vehicle) => {
+    const transactionTotal = filteredTransactions
+      .filter((t) => t.vehicleId === vehicle.id && t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const fuelingTotal = filteredFuelings
+      .filter((f) => f.vehicleId === vehicle.id)
+      .reduce((sum, f) => sum + f.totalAmount, 0);
+    
+    return { name: vehicle.name, value: transactionTotal + fuelingTotal };
+  }).filter((item) => item.value > 0);
 
   const handleExportPDF = async () => {
-    if (!reportRef.current) return;
-
-    setExporting(true);
     try {
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: 800,
-        windowWidth: 800,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-report-content]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.breakInside = 'avoid';
-            const charts = clonedElement.querySelectorAll('[data-chart-section]');
-            charts.forEach((chart) => {
-              (chart as HTMLElement).style.breakInside = 'avoid';
-              (chart as HTMLElement).style.pageBreakInside = 'avoid';
-            });
-          }
-        }
+      setExporting(true);
+      toast({
+        title: "Gerando PDF",
+        description: "Por favor, aguarde...",
       });
 
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = 210;
-      const pdfHeight = 297;
-      const imgWidth = pdfWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 10;
+
+      const refs = [page1Ref, page2Ref, page3Ref, page4Ref, page5Ref, page6Ref];
       
-      let heightLeft = imgHeight;
-      let position = 10;
+      for (let i = 0; i < refs.length; i++) {
+        const element = refs[i].current;
+        if (!element) continue;
 
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20);
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: 800,
+          windowWidth: 800,
+        });
 
-      while (heightLeft > 0) {
-        position = -(pdfHeight - 20) * Math.ceil((imgHeight - heightLeft) / (pdfHeight - 20)) + 10;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= (pdfHeight - 20);
+        const imgData = canvas.toDataURL("image/png");
+        const imgWidth = pageWidth - 2 * margin;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(imgData, "PNG", margin, margin, imgWidth, Math.min(imgHeight, pageHeight - 2 * margin));
       }
 
-      pdf.save(`relatorio-${startDate}-a-${endDate}.pdf`);
+      pdf.save(`relatorio-detalhado-${new Date().toISOString().split("T")[0]}.pdf`);
+
+      toast({
+        title: "Sucesso",
+        description: "PDF gerado com sucesso!",
+      });
     } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar PDF",
+        variant: "destructive",
+      });
     } finally {
       setExporting(false);
     }
   };
 
-  if (loading || authLoading) {
+  if (authLoading || loading) {
     return (
-      <Layout userName="...">
-        <div className="p-8">Carregando...</div>
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
       </Layout>
     );
   }
 
   return (
-    <Layout userName={user?.email || "Usuário"}>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h2 className="text-3xl font-bold text-foreground">Relatório Detalhado</h2>
-            <p className="text-muted-foreground">Análise completa do período selecionado</p>
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-4">Relatório Detalhado</h1>
+          
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+              <CardDescription>Selecione o período do relatório</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="startDate">Data Inicial</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endDate">Data Final</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={handleExportPDF} disabled={exporting} className="w-full">
+                    {exporting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Gerando PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar PDF
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Hidden pages for PDF export */}
+        <div className="hidden">
+          {/* Page 1: Summary */}
+          <div ref={page1Ref} className="w-[800px] bg-white p-8">
+            <h1 className="text-2xl font-bold mb-6 text-gray-900">Relatório Financeiro Detalhado</h1>
+            <p className="text-sm text-gray-600 mb-6">
+              Período: {startDate ? new Date(startDate).toLocaleDateString() : "Início"} até{" "}
+              {endDate ? new Date(endDate).toLocaleDateString() : "Hoje"}
+            </p>
+            
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-green-50 p-4 rounded">
+                <p className="text-sm text-gray-600">Total de Receitas</p>
+                <p className="text-xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+              </div>
+              <div className="bg-red-50 p-4 rounded">
+                <p className="text-sm text-gray-600">Total de Despesas</p>
+                <p className="text-xl font-bold text-red-600">
+                  {formatCurrency(totalExpenses + totalFuelingExpenses)}
+                </p>
+              </div>
+              <div className="bg-blue-50 p-4 rounded">
+                <p className="text-sm text-gray-600">Saldo</p>
+                <p className={`text-xl font-bold ${balance >= 0 ? "text-blue-600" : "text-red-600"}`}>
+                  {formatCurrency(balance)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">Detalhamento de Despesas</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-gray-700">Transações:</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(totalExpenses)}</span>
+                </div>
+                <div className="flex justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-gray-700">Abastecimentos:</span>
+                  <span className="font-medium text-gray-900">{formatCurrency(totalFuelingExpenses)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Page 2: Income List */}
+          <div ref={page2Ref} className="w-[800px] bg-white p-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Receitas Detalhadas</h2>
+            <div className="space-y-2">
+              {filteredTransactions
+                .filter((t) => t.type === "income")
+                .slice(0, 15)
+                .map((transaction) => {
+                  const category = categories.find((c) => c.id === transaction.categoryId);
+                  const vehicle = vehicles.find((v) => v.id === transaction.vehicleId);
+                  return (
+                    <div key={transaction.id} className="flex justify-between items-center p-2 border-b text-sm">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{transaction.description}</p>
+                        <p className="text-xs text-gray-600">
+                          {category?.name} • {vehicle?.name} • {new Date(transaction.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="font-bold text-green-600">{formatCurrency(transaction.amount)}</span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Page 3: Expenses List */}
+          <div ref={page3Ref} className="w-[800px] bg-white p-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Despesas Detalhadas</h2>
+            <div className="space-y-2">
+              {filteredTransactions
+                .filter((t) => t.type === "expense")
+                .slice(0, 15)
+                .map((transaction) => {
+                  const category = categories.find((c) => c.id === transaction.categoryId);
+                  const vehicle = vehicles.find((v) => v.id === transaction.vehicleId);
+                  return (
+                    <div key={transaction.id} className="flex justify-between items-center p-2 border-b text-sm">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{transaction.description}</p>
+                        <p className="text-xs text-gray-600">
+                          {category?.name} • {vehicle?.name} • {new Date(transaction.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="font-bold text-red-600">{formatCurrency(transaction.amount)}</span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Page 4: Expenses by Category */}
+          <div ref={page4Ref} className="w-[800px] bg-white p-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Despesas por Categoria</h2>
+            {expensesByCategory.length > 0 ? (
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={expensesByCategory}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Bar dataKey="value" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-600">Nenhuma despesa encontrada no período</p>
+            )}
+          </div>
+
+          {/* Page 5: Income by Category */}
+          <div ref={page5Ref} className="w-[800px] bg-white p-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Receitas por Categoria</h2>
+            {incomeByCategory.length > 0 ? (
+              <ResponsiveContainer width="100%" height={350}>
+                <PieChart>
+                  <Pie
+                    data={incomeByCategory}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(entry) => `${entry.name}: ${formatCurrency(entry.value)}`}
+                    outerRadius={120}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {incomeByCategory.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-600">Nenhuma receita encontrada no período</p>
+            )}
+          </div>
+
+          {/* Page 6: Expenses by Vehicle */}
+          <div ref={page6Ref} className="w-[800px] bg-white p-8">
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Despesas por Veículo</h2>
+            {expensesByVehicle.length > 0 ? (
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={expensesByVehicle}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Bar dataKey="value" fill="#0088FE" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-600">Nenhuma despesa de veículo encontrada no período</p>
+            )}
           </div>
         </div>
 
-        <Card className="shadow-md">
+        {/* Visible preview */}
+        <Card>
           <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle>Filtros e Exportação</CardTitle>
-              <Button onClick={handleExportPDF} disabled={exporting} className="gap-2">
-                {exporting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Gerando PDF...
-                  </>
-                ) : (
-                  <>
-                    <FileDown className="w-4 h-4" />
-                    Exportar PDF
-                  </>
-                )}
-              </Button>
-            </div>
+            <CardTitle>Visualização do Relatório</CardTitle>
+            <CardDescription>
+              O relatório será exportado em 6 páginas separadas para garantir que nenhum conteúdo seja cortado
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate">Data Início</Label>
-                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-green-100 p-4 rounded">
+                <p className="text-sm text-gray-700">Total de Receitas</p>
+                <p className="text-2xl font-bold text-green-700">{formatCurrency(totalIncome)}</p>
               </div>
-              <div>
-                <Label htmlFor="endDate">Data Fim</Label>
-                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <div className="bg-red-100 p-4 rounded">
+                <p className="text-sm text-gray-700">Total de Despesas</p>
+                <p className="text-2xl font-bold text-red-700">
+                  {formatCurrency(totalExpenses + totalFuelingExpenses)}
+                </p>
+              </div>
+              <div className="bg-blue-100 p-4 rounded md:col-span-2">
+                <p className="text-sm text-gray-700">Saldo</p>
+                <p className={`text-2xl font-bold ${balance >= 0 ? "text-blue-700" : "text-red-700"}`}>
+                  {formatCurrency(balance)}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-          <div ref={reportRef} data-report-content className="space-y-4 bg-white p-6 rounded-lg max-w-[800px] mx-auto text-gray-900">
-            <div className="text-center border-b border-gray-300 pb-3">
-              <h2 className="text-xl font-bold text-gray-900">Relatório Financeiro Detalhado</h2>
-              <p className="text-sm text-gray-600">
-                Período: {format(new Date(startDate), "dd/MM/yyyy", { locale: ptBR })} até{" "}
-                {format(new Date(endDate), "dd/MM/yyyy", { locale: ptBR })}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="border border-gray-200 rounded p-3 bg-white">
-                <div className="text-xs font-medium text-gray-600 mb-1">Total Receitas</div>
-                <div className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</div>
-                <p className="text-[10px] text-gray-500 mt-1">
-                  Prog: {formatCurrency(scheduledIncome)} | Rec: {formatCurrency(receivedIncome)}
-                </p>
-              </div>
-
-              <div className="border border-gray-200 rounded p-3 bg-white">
-                <div className="text-xs font-medium text-gray-600 mb-1">Total Despesas</div>
-                <div className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
-                <p className="text-[10px] text-gray-500 mt-1">
-                  Prog: {formatCurrency(scheduledExpenses)} | Efet: {formatCurrency(paidExpenses)}
-                </p>
-              </div>
-
-              <div className="border border-gray-200 rounded p-3 bg-white">
-                <div className="text-xs font-medium text-gray-600 mb-1">Saldo</div>
-                <div className={`text-lg font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                  {formatCurrency(balance)}
-                </div>
-                <p className="text-[10px] text-gray-500 mt-1">Km: {totalKmDriven.toLocaleString("pt-BR")}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold mb-2 text-green-700">
-                  Receitas ({filteredTransactions.filter((t) => t.type === "income").length})
-                </h3>
-                <div className="space-y-1">
-                  {filteredTransactions
-                    .filter((t) => t.type === "income")
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .map((tx) => {
-                      const category = categories.find((c) => c.id === tx.category_id);
-                      const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
-                      return (
-                        <div key={tx.id} className="flex justify-between items-start gap-2 p-2 bg-gray-50 rounded text-xs border border-gray-200">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{tx.description}</p>
-                            <p className="text-[10px] text-gray-600">
-                              {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
-                              <span className={tx.status === "efetivado" ? "text-green-600" : "text-amber-600"}>
-                                {tx.status === "efetivado" ? "Efet." : "Prog."}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="font-bold text-green-600 whitespace-nowrap">{formatCurrency(tx.amount)}</div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold mb-2 text-red-700">
-                  Despesas ({filteredTransactions.filter((t) => t.type === "expense").length})
-                </h3>
-                <div className="space-y-1">
-                  {filteredTransactions
-                    .filter((t) => t.type === "expense")
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .map((tx) => {
-                      const category = categories.find((c) => c.id === tx.category_id);
-                      const vehicle = vehicles.find((v) => v.id === tx.vehicle_id);
-                      return (
-                        <div key={tx.id} className="flex justify-between items-start gap-2 p-2 bg-gray-50 rounded text-xs border border-gray-200">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{tx.description}</p>
-                            <p className="text-[10px] text-gray-600">
-                              {category?.name} | {vehicle?.name} | {format(parseLocalDate(tx.date), "dd/MM/yyyy")} |{" "}
-                              <span className={tx.status === "efetivado" ? "text-red-600" : "text-amber-600"}>
-                                {tx.status === "efetivado" ? "Efet." : "Prog."}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="font-bold text-red-600 whitespace-nowrap">{formatCurrency(tx.amount)}</div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {expensesByCategory.length > 0 && (
-                <div data-chart-section className="break-inside-avoid">
-                  <h3 className="text-sm font-semibold mb-2 text-gray-900">Despesas por Categoria</h3>
-                  <div className="w-full h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={expensesByCategory} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis type="number" tick={{ fontSize: 10 }} />
-                        <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 9 }} />
-                        <Legend wrapperStyle={{ fontSize: 10 }} />
-                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Prog." />
-                        <Bar dataKey="efetivado" stackId="a" fill="#DC2626" name="Efet." />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-
-              {incomeByCategory.length > 0 && (
-                <div data-chart-section className="break-inside-avoid">
-                  <h3 className="text-sm font-semibold mb-2 text-gray-900">Receitas por Categoria</h3>
-                  <div className="w-full h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={incomeByCategory} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis type="number" tick={{ fontSize: 10 }} />
-                        <YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 9 }} />
-                        <Legend wrapperStyle={{ fontSize: 10 }} />
-                        <Bar dataKey="programado" stackId="a" fill="#F59E0B" name="Prog." />
-                        <Bar dataKey="efetivado" stackId="a" fill="#10B981" name="Efet." />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
-
-          {expensesByVehicle.length > 0 && (
-            <div data-chart-section className="break-inside-avoid">
-              <h3 className="text-sm font-semibold mb-2 text-gray-900">Despesas por Veículo</h3>
-              <div className="w-full h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expensesByVehicle}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={70}
-                      fill="#8884d8"
-                      dataKey="value"
-                      style={{ fontSize: 10 }}
-                    >
-                      {expensesByVehicle.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          <div className="border-t border-gray-300 pt-3 mt-4">
-            <h3 className="text-sm font-bold mb-2 text-gray-900">Resumo Geral</h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <div className="space-y-1">
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Total Receitas:</span>
-                  <span className="font-semibold text-green-600">{formatCurrency(totalIncome)}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Rec. Programadas:</span>
-                  <span className="font-medium text-amber-600">{formatCurrency(scheduledIncome)}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Rec. Efetivadas:</span>
-                  <span className="font-medium text-green-600">{formatCurrency(receivedIncome)}</span>
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Total Despesas:</span>
-                  <span className="font-semibold text-red-600">{formatCurrency(totalExpenses)}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Desp. Programadas:</span>
-                  <span className="font-medium text-amber-600">{formatCurrency(scheduledExpenses)}</span>
-                </p>
-                <p className="flex justify-between">
-                  <span className="text-gray-600">Desp. Efetivadas:</span>
-                  <span className="font-medium text-red-600">{formatCurrency(paidExpenses)}</span>
-                </p>
-              </div>
-              <div className="col-span-2 border-t border-gray-200 pt-2 mt-1">
-                <div className="grid grid-cols-2 gap-1">
-                  <p className="flex justify-between">
-                    <span className="font-semibold text-gray-900">Saldo Final:</span>
-                    <span className={`font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {formatCurrency(balance)}
-                    </span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-gray-600">Km Rodados:</span>
-                    <span className="font-medium text-gray-900">{totalKmDriven.toLocaleString("pt-BR")} km</span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-gray-600">Total Transações:</span>
-                    <span className="font-medium text-gray-900">{filteredTransactions.length}</span>
-                  </p>
-                  <p className="flex justify-between">
-                    <span className="text-gray-600">Custo/Km:</span>
-                    <span className="font-medium text-gray-900">
-                      {totalKmDriven > 0 ? formatCurrency(paidExpenses / totalKmDriven) : formatCurrency(0)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </Layout>
   );
-};
-
-export default DetailedReport;
+}

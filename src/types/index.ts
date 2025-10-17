@@ -53,4 +53,5 @@ export interface Profile {
   id: string;
   name: string;
   plan_id: string;
+  active: boolean;
 }

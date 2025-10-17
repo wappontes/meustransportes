@@ -52,7 +52,6 @@ const Layout = ({ children, userName }: LayoutProps) => {
     { path: "/categories", icon: Tags, label: "Categorias" },
     { path: "/transactions", icon: TrendingUp, label: "Transações" },
     { path: "/fueling", icon: Fuel, label: "Abastecimento" },
-    { path: "/plans", icon: FileText, label: "Planos" },
     { path: "/profile", icon: User, label: "Perfil" },
   ];
 

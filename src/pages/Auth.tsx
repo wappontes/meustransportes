@@ -194,9 +194,8 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Cadastrar</TabsTrigger>
               <TabsTrigger value="reset">Recuperar</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
@@ -214,32 +213,8 @@ const Auth = () => {
                 </Button>
               </form>
             </TabsContent>
-            <TabsContent value="signup">
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nome</Label>
-                  <Input id="signup-name" name="name" type="text" placeholder="Seu nome completo" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input id="signup-email" name="email" type="email" placeholder="seu@email.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Senha</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Cadastrando..." : "Criar Conta"}
-                </Button>
-              </form>
-            </TabsContent>
+
+            {/* Reset Password Tab */}
             <TabsContent value="reset">
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div className="space-y-2">
