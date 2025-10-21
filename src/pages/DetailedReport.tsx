@@ -18,7 +18,7 @@ import { ptBR } from "date-fns/locale";
 
 const DetailedReport = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -41,12 +41,14 @@ const DetailedReport = () => {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return; // Aguarda verificação de autenticação
+    
     if (!user) {
       navigate("/");
       return;
     }
     fetchData();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchData = async () => {
     if (!user) return;
