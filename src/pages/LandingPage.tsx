@@ -3,20 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { 
   Car, 
   Receipt, 
-  Bell, 
   BarChart, 
   FileText, 
   AlertCircle, 
-  CheckCircle2 
+  CheckCircle2,
+  Check 
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Accordion } from "@/components/ui/accordion";
 import { Navbar } from "@/components/landing/Navbar";
 import { PricingCard } from "@/components/landing/PricingCard";
 import { FeatureCard } from "@/components/landing/FeatureCard";
-import { FAQItem } from "@/components/landing/FAQItem";
 import { Footer } from "@/components/landing/Footer";
+import heroDashboard from "@/assets/hero-dashboard.png";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -38,27 +37,22 @@ export default function LandingPage() {
     {
       icon: Car,
       title: "Cadastre seus veículos em segundos",
-      description: "Adicione sua frota rapidamente e comece a gerenciar imediatamente",
+      description: "Adicione sua frota rapidamente com informações completas",
     },
     {
       icon: Receipt,
-      title: "Lance despesas, receitas e abastecimentos",
-      description: "Registre transações de forma rápida com poucos cliques",
-    },
-    {
-      icon: Bell,
-      title: "Receba alertas inteligentes",
-      description: "Notificações para manutenção e gastos fora do padrão",
+      title: "Lance despesas, receitas e abastecimentos com poucos cliques",
+      description: "Registre todas as transações de forma rápida e organizada",
     },
     {
       icon: BarChart,
-      title: "Visualize relatórios automaticamente",
-      description: "Gráficos e dados sempre atualizados em tempo real",
+      title: "Visualize relatórios e gráficos automaticamente",
+      description: "Dados sempre atualizados em tempo real",
     },
     {
       icon: FileText,
       title: "Histórico financeiro completo",
-      description: "Tenha todos os dados da sua frota sempre à mão",
+      description: "Acesse todo o histórico de transações quando precisar",
     },
   ];
 
@@ -67,9 +61,7 @@ export default function LandingPage() {
     "Gestão completa de receitas",
     "Relatórios e gráficos detalhados",
     "Histórico completo das transações",
-    "Alertas personalizados",
     "Backup automático na nuvem",
-    "Suporte prioritário",
     "Atualizações gratuitas",
   ];
 
@@ -77,56 +69,119 @@ export default function LandingPage() {
     <div className="min-h-screen">
       <Navbar />
 
-      {/* Seção Hero */}
-      <section className="pt-24 pb-16 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            Controle total da sua frota, sem dor de cabeça!
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Transforme a gestão de veículos, simplifique despesas, receitas e abastecimentos – tudo em um só lugar.
-          </p>
-          <Button size="lg" onClick={scrollToPlans} className="text-lg px-8 py-6">
-            Comece Agora
-          </Button>
+      {/* Hero Section */}
+      <section className="pt-32 pb-20 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Coluna Esquerda - Conteúdo */}
+            <div>
+              <div className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                Controle Financeiro Inteligente
+              </div>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+                Tenha Controle Total das{" "}
+                <span className="text-primary">Finanças do Seu Veículo</span>
+              </h1>
+              <p className="text-xl text-muted-foreground mb-8">
+                Pare de perder dinheiro! Com o Meus Transportes, você registra
+                despesas, acompanha receitas e descobre quanto seu veículo
+                realmente rende.
+              </p>
+              <div className="space-y-3 mb-8">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-lg">
+                    Controle completo de todas as despesas e receitas
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-lg">
+                    Relatórios detalhados para tomar decisões inteligentes
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-lg">Interface simples e fácil de usar</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" onClick={scrollToPlans}>
+                  Começar Agora
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    document
+                      .getElementById("como-funciona")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  Ver Recursos
+                </Button>
+              </div>
+            </div>
+
+            {/* Coluna Direita - Imagem */}
+            <div className="relative">
+              <img
+                src={heroDashboard}
+                alt="Dashboard do Meus Transportes mostrando controle de despesas e receitas"
+                className="w-full h-auto rounded-lg shadow-2xl"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Seção Dor Latente */}
-      <section className="py-16 bg-red-50 dark:bg-red-950/20">
+      {/* Seção Problema */}
+      <section className="py-20 bg-slate-50 dark:bg-slate-900/30">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-red-100 dark:bg-red-900/30 mb-6 shadow-lg">
+            <AlertCircle className="w-12 h-12 text-red-600 dark:text-red-400" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
             Sua frota está desorganizada, trazendo prejuízo escondido?
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground">
-            Gerenciar gastos, receitas e abastecimentos no papel ou planilhas consome tempo e gera erros, 
-            resultando em descontrole financeiro e oportunidades perdidas.
+          <p className="text-xl text-muted-foreground leading-relaxed">
+            Gerenciar gastos, receitas e abastecimentos no papel ou planilhas
+            consome tempo e gera erros, resultando em descontrole financeiro e
+            oportunidades perdidas.
           </p>
         </div>
       </section>
 
-      {/* Seção Transição para Solução */}
-      <section className="py-16 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+      {/* Seção Solução */}
+      <section className="py-20 bg-green-50 dark:bg-green-950/10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/30 mb-6 shadow-lg">
+            <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
             Chega de perder controle financeiro!
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground">
-            Automatize o registro de despesas, receitas e abastecimentos da sua frota em minutos. 
-            Tenha relatórios detalhados e alertas para decisões mais rápidas e assertivas.
+          <p className="text-xl text-muted-foreground leading-relaxed">
+            Automatize o registro de despesas, receitas e abastecimentos da sua
+            frota em minutos. Tenha relatórios detalhados para decisões mais
+            rápidas e assertivas.
           </p>
         </div>
       </section>
 
-      {/* Seção Como Funciona */}
-      <section className="py-16 px-4">
+      {/* Como Funciona */}
+      <section id="como-funciona" className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+          <h2 className="text-4xl font-bold text-center mb-12">
             Veja como é simples resolver:
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <FeatureCard key={index} {...feature} />
             ))}
@@ -159,14 +214,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Seção Planos */}
-      <section id="planos" className="py-16 px-4">
+      {/* Planos */}
+      <section id="planos" className="py-16 px-4 bg-slate-50 dark:bg-slate-900/30">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+          <h2 className="text-4xl font-bold text-center mb-4">
             Escolha o plano perfeito para sua necessidade
           </h2>
-          <p className="text-center text-muted-foreground mb-12 text-lg">
-            Todos os planos incluem 30 dias de garantia
+          <p className="text-center text-lg text-muted-foreground mb-12">
+            <strong>Todos os planos incluem 30 dias de garantia</strong>
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <PricingCard
@@ -199,42 +254,26 @@ export default function LandingPage() {
               features={planFeatures}
             />
           </div>
-        </div>
-      </section>
 
-      {/* Seção FAQ */}
-      <section className="py-16 px-4 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Perguntas Frequentes
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <FAQItem
-              value="item-1"
-              question="Preciso de cartão de crédito para testar?"
-              answer="Não! Você pode começar gratuitamente e testar todas as funcionalidades por 30 dias. Apenas cadastre-se com seu email."
-            />
-            <FAQItem
-              value="item-2"
-              question="Posso cancelar quando quiser?"
-              answer="Sim! Você tem total liberdade para cancelar sua assinatura a qualquer momento, sem burocracia e sem taxas de cancelamento."
-            />
-            <FAQItem
-              value="item-3"
-              question="Tem suporte incluso?"
-              answer="Sim! Todos os planos incluem suporte prioritário por email e chat. Nossa equipe está pronta para ajudar você a aproveitar ao máximo o sistema."
-            />
-            <FAQItem
-              value="item-4"
-              question="Como funciona a garantia?"
-              answer="Se você não ficar satisfeito nos primeiros 30 dias, devolvemos 100% do seu investimento, sem perguntas. Sua satisfação é nossa prioridade."
-            />
-            <FAQItem
-              value="item-5"
-              question="Posso mudar de plano depois?"
-              answer="Claro! Você pode fazer upgrade ou downgrade do seu plano a qualquer momento, de acordo com suas necessidades. As mudanças são aplicadas imediatamente."
-            />
-          </Accordion>
+          {/* Plano Personalizado */}
+          <div className="mt-12">
+            <div className="bg-background dark:bg-slate-800 rounded-lg p-8 max-w-2xl mx-auto border shadow-sm">
+              <h3 className="text-2xl font-bold mb-3 text-center">
+                Precisa de um plano personalizado?
+              </h3>
+              <p className="text-lg text-muted-foreground mb-6 text-center">
+                Entre em contato conosco! Desenvolvemos soluções sob medida para
+                sua frota, independente do tamanho ou necessidades específicas.
+              </p>
+              <div className="text-center">
+                <Button size="lg" variant="outline" asChild>
+                  <a href="mailto:contato@meustransportes.com">
+                    Falar com Especialista
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

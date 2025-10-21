@@ -46,15 +46,9 @@ export function PricingCard({
               <Check className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
               <span className="text-sm">{feature}</span>
             </li>
-          ))}
-        </ul>
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-md">
-          <p className="text-sm text-primary font-medium">Garantia de 30 dias:</p>
-          <p className="text-sm text-muted-foreground">
-            Se não gostar, devolvemos seu dinheiro
-          </p>
-        </div>
-      </CardContent>
+        ))}
+      </ul>
+    </CardContent>
       <CardFooter className="flex flex-col gap-2">
         <Button 
           onClick={handleSubscribe}
