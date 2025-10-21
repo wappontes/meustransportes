@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,6 +190,12 @@ const Auth = () => {
           <div>
             <CardTitle className="text-3xl font-bold">Meus Transportes</CardTitle>
             <CardDescription className="text-base mt-2">Gerencie sua frota com facilidade</CardDescription>
+            <CardDescription className="text-base mt-2">
+              Ainda não tem conta?{" "}
+              <Link to="/" className="text-primary underline hover:text-primary/80">
+                Escolha um plano
+              </Link>
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
