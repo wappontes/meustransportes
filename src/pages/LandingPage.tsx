@@ -1,14 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Car, 
-  Receipt, 
-  BarChart, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle2,
-  Check 
-} from "lucide-react";
+import { Car, Receipt, BarChart, FileText, AlertCircle, CheckCircle2, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/landing/Navbar";
@@ -78,17 +70,16 @@ export default function LandingPage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
                 Controle Financeiro Inteligente
               </div>
-              
+
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                Tenha Controle Total das{" "}
-                <span className="text-primary">Finanças do Seu Veículo</span>
+                Tenha Controle Total das <span className="text-primary">Finanças do Seu Veículo</span>
               </h1>
-              
+
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Pare de perder dinheiro! Com o Meus Transportes, você registra despesas, 
-                acompanha receitas e descobre quanto seu veículo realmente rende.
+                Pare de perder dinheiro! Com o Meus Transportes, você registra despesas, acompanha receitas e descobre
+                quanto seu veículo realmente rende.
               </p>
-              
+
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <Check className="w-6 h-6 text-primary shrink-0 mt-1" />
@@ -103,15 +94,15 @@ export default function LandingPage() {
                   <span className="text-lg">Interface simples e fácil de usar</span>
                 </li>
               </ul>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button size="lg" onClick={scrollToPlans} className="text-lg px-8">
                   Começar Agora
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => document.getElementById("como-funciona")?.scrollIntoView({ behavior: "smooth" })}
                   className="text-lg px-8"
                 >
                   Ver Recursos
@@ -143,9 +134,8 @@ export default function LandingPage() {
             Sua frota está desorganizada, trazendo prejuízo escondido?
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed">
-            Gerenciar gastos, receitas e abastecimentos no papel ou planilhas
-            consome tempo e gera erros, resultando em descontrole financeiro e
-            oportunidades perdidas.
+            Gerenciar gastos, receitas e abastecimentos no papel ou planilhas consome tempo e gera erros, resultando em
+            descontrole financeiro e oportunidades perdidas.
           </p>
         </div>
       </section>
@@ -156,13 +146,10 @@ export default function LandingPage() {
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/30 mb-6 shadow-lg">
             <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400" />
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Chega de perder controle financeiro!
-          </h2>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">Chega de perder controle financeiro!</h2>
           <p className="text-xl text-muted-foreground leading-relaxed">
-            Automatize o registro de despesas, receitas e abastecimentos da sua
-            frota em minutos. Tenha relatórios detalhados para decisões mais
-            rápidas e assertivas.
+            Automatize o registro de despesas, receitas e abastecimentos da sua frota em minutos. Tenha relatórios
+            detalhados para decisões mais rápidas e assertivas.
           </p>
         </div>
       </section>
@@ -170,9 +157,7 @@ export default function LandingPage() {
       {/* Como Funciona */}
       <section id="como-funciona" className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">
-            Veja como é simples resolver:
-          </h2>
+          <h2 className="text-4xl font-bold text-center mb-12">Veja como é simples resolver:</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <FeatureCard key={index} {...feature} />
@@ -184,9 +169,7 @@ export default function LandingPage() {
       {/* Seção Público-Alvo */}
       <section className="py-16 bg-slate-50 dark:bg-slate-900 px-4">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
-            Feito sob medida para:
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Feito sob medida para:</h2>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="text-primary w-6 h-6 mt-1 shrink-0" />
@@ -209,9 +192,7 @@ export default function LandingPage() {
       {/* Planos */}
       <section id="planos" className="py-16 px-4 bg-slate-50 dark:bg-slate-900/30">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-4">
-            Escolha o plano perfeito para sua necessidade
-          </h2>
+          <h2 className="text-4xl font-bold text-center mb-4">Escolha o plano perfeito para sua necessidade</h2>
           <p className="text-center text-lg text-muted-foreground mb-12">
             Selecione a quantidade de veículos ideal para seu negócio
           </p>
@@ -219,21 +200,21 @@ export default function LandingPage() {
             <PricingCard
               name="Inicial"
               vehicles="1 Veículo"
-              price={39.90}
+              price={(39, 90)}
               paymentLink="https://pay.cakto.com.br/3nraaax_600812"
               features={planFeatures}
             />
             <PricingCard
               name="Intermediário"
               vehicles="Até 3 Veículos"
-              price={69.90}
+              price={(69, 90)}
               paymentLink="https://pay.cakto.com.br/37sp94e"
               features={planFeatures}
             />
             <PricingCard
               name="Avançado"
               vehicles="Até 5 Veículos"
-              price={99.90}
+              price={(99, 90)}
               paymentLink="https://pay.cakto.com.br/vcu9f9p"
               features={planFeatures}
               isPopular={true}
@@ -241,7 +222,7 @@ export default function LandingPage() {
             <PricingCard
               name="Premium"
               vehicles="Até 10 Veículos"
-              price={199.90}
+              price={(199, 90)}
               paymentLink="https://pay.cakto.com.br/cgsmmcy"
               features={planFeatures}
             />
@@ -250,18 +231,14 @@ export default function LandingPage() {
           {/* Plano Personalizado */}
           <div className="mt-12">
             <div className="bg-background dark:bg-slate-800 rounded-lg p-8 max-w-2xl mx-auto border shadow-sm">
-              <h3 className="text-2xl font-bold mb-3 text-center">
-                Precisa de um plano personalizado?
-              </h3>
+              <h3 className="text-2xl font-bold mb-3 text-center">Precisa de um plano personalizado?</h3>
               <p className="text-lg text-muted-foreground mb-6 text-center">
-                Entre em contato conosco! Desenvolvemos soluções sob medida para
-                sua frota, independente do tamanho ou necessidades específicas.
+                Entre em contato conosco! Desenvolvemos soluções sob medida para sua frota, independente do tamanho ou
+                necessidades específicas.
               </p>
               <div className="text-center">
                 <Button size="lg" variant="outline" asChild>
-                  <a href="mailto:contato@meustransportes.com">
-                    Falar com Especialista
-                  </a>
+                  <a href="mailto:contato@meustransportes.com">Falar com Especialista</a>
                 </Button>
               </div>
             </div>
