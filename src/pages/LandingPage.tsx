@@ -200,21 +200,21 @@ export default function LandingPage() {
             <PricingCard
               name="Inicial"
               vehicles="1 Veículo"
-              price={(39, 90)}
+              price={39.9}
               paymentLink="https://pay.cakto.com.br/3nraaax_600812"
               features={planFeatures}
             />
             <PricingCard
               name="Intermediário"
               vehicles="Até 3 Veículos"
-              price={(69, 90)}
+              price={69.9}
               paymentLink="https://pay.cakto.com.br/37sp94e"
               features={planFeatures}
             />
             <PricingCard
               name="Avançado"
               vehicles="Até 5 Veículos"
-              price={(99, 90)}
+              price={99.9}
               paymentLink="https://pay.cakto.com.br/vcu9f9p"
               features={planFeatures}
               isPopular={true}
@@ -222,7 +222,7 @@ export default function LandingPage() {
             <PricingCard
               name="Premium"
               vehicles="Até 10 Veículos"
-              price={(199, 90)}
+              price={199.9}
               paymentLink="https://pay.cakto.com.br/cgsmmcy"
               features={planFeatures}
             />
