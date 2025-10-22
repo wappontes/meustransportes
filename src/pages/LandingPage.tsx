@@ -201,7 +201,7 @@ export default function LandingPage() {
               name="Inicial"
               vehicles="1 Veículo"
               /*price={39.9}*/
-              price={(39.9).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              price={(39.9).toLocaleString("pt-BR", { style: "currency" })}
               paymentLink="https://pay.cakto.com.br/3nraaax_600812"
               features={planFeatures}
             />
