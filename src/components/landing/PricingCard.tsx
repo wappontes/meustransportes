@@ -49,7 +49,7 @@ export function PricingCard({
         ))}
       </ul>
     </CardContent>
-      <CardFooter className="flex flex-col gap-2">
+      <CardFooter>
         <Button 
           onClick={handleSubscribe}
           className="w-full"
@@ -57,9 +57,6 @@ export function PricingCard({
         >
           Assinar por R$ {price}
         </Button>
-        <p className="text-xs text-center text-muted-foreground">
-          Cancele quando quiser
-        </p>
       </CardFooter>
     </Card>
   );

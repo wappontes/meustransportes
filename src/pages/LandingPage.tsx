@@ -72,57 +72,47 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Coluna Esquerda - Conteúdo */}
-            <div>
-              <div className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
                 Controle Financeiro Inteligente
               </div>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 Tenha Controle Total das{" "}
                 <span className="text-primary">Finanças do Seu Veículo</span>
               </h1>
-              <p className="text-xl text-muted-foreground mb-8">
-                Pare de perder dinheiro! Com o Meus Transportes, você registra
-                despesas, acompanha receitas e descobre quanto seu veículo
-                realmente rende.
+              
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Pare de perder dinheiro! Com o Meus Transportes, você registra despesas, 
+                acompanha receitas e descobre quanto seu veículo realmente rende.
               </p>
-              <div className="space-y-3 mb-8">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">
-                    <Check className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="text-lg">
-                    Controle completo de todas as despesas e receitas
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">
-                    <Check className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="text-lg">
-                    Relatórios detalhados para tomar decisões inteligentes
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">
-                    <Check className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="text-lg">Interface simples e fácil de usar</p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" onClick={scrollToPlans}>
+              
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-primary shrink-0 mt-1" />
+                  <span className="text-lg">Controle completo de todas as despesas e receitas</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-primary shrink-0 mt-1" />
+                  <span className="text-lg">Relatórios detalhados para tomar decisões inteligentes</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Check className="w-6 h-6 text-primary shrink-0 mt-1" />
+                  <span className="text-lg">Interface simples e fácil de usar</span>
+                </li>
+              </ul>
+              
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button size="lg" onClick={scrollToPlans} className="text-lg px-8">
                   Começar Agora
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => {
-                    document
-                      .getElementById("como-funciona")
-                      ?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-lg px-8"
                 >
                   Ver Recursos
                 </Button>
@@ -130,12 +120,14 @@ export default function LandingPage() {
             </div>
 
             {/* Coluna Direita - Imagem */}
-            <div className="relative">
-              <img
-                src={heroDashboard}
-                alt="Dashboard do Meus Transportes mostrando controle de despesas e receitas"
-                className="w-full h-auto rounded-lg shadow-2xl"
-              />
+            <div className="relative lg:pl-8">
+              <div className="relative rounded-xl overflow-hidden shadow-2xl">
+                <img
+                  src={heroDashboard}
+                  alt="Dashboard do Meus Transportes mostrando controle de despesas e receitas"
+                  className="w-full h-auto"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -221,7 +213,7 @@ export default function LandingPage() {
             Escolha o plano perfeito para sua necessidade
           </h2>
           <p className="text-center text-lg text-muted-foreground mb-12">
-            <strong>Todos os planos incluem 30 dias de garantia</strong>
+            Selecione a quantidade de veículos ideal para seu negócio
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <PricingCard

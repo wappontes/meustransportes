@@ -295,17 +295,17 @@ const Profile = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              Plano
+              Plano Atual
             </CardTitle>
-            <CardDescription>Selecione o plano desejado</CardDescription>
+            <CardDescription>Seu plano de assinatura</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="plan">Escolha seu plano</Label>
-                <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <Label htmlFor="plan">Plano</Label>
+                <Select value={selectedPlan} disabled>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um plano" />
+                    <SelectValue placeholder="Nenhum plano selecionado" />
                   </SelectTrigger>
                   <SelectContent>
                     {plans.map((plan) => (
@@ -316,9 +316,9 @@ const Profile = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleUpdatePlan} disabled={isLoading || !selectedPlan}>
-                {isLoading ? "Salvando..." : "Salvar Plano"}
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                Para alterar seu plano, entre em contato com o suporte.
+              </p>
             </div>
           </CardContent>
         </Card>
