@@ -208,14 +208,16 @@ export default function LandingPage() {
             <PricingCard
               name="Intermediário"
               vehicles="Até 3 Veículos"
-              price={69.9}
+              /*price={69.9}*/
+              price={(69.9).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               paymentLink="https://pay.cakto.com.br/37sp94e"
               features={planFeatures}
             />
             <PricingCard
               name="Avançado"
               vehicles="Até 5 Veículos"
-              price={99.9}
+              /*price={99.9}*/
+              price={(99.9).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               paymentLink="https://pay.cakto.com.br/vcu9f9p"
               features={planFeatures}
               isPopular={true}
@@ -223,7 +225,8 @@ export default function LandingPage() {
             <PricingCard
               name="Premium"
               vehicles="Até 10 Veículos"
-              price={199.9}
+              /*price={199.9}*/
+              price={(199.9).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               paymentLink="https://pay.cakto.com.br/cgsmmcy"
               features={planFeatures}
             />
