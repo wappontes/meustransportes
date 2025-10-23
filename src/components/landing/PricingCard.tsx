@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 interface PricingCardProps {
   name: string;
   vehicles: string;
-  price: number;
+  price: string;
   features: string[];
   paymentLink: string;
   isPopular?: boolean;
