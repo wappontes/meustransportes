@@ -214,6 +214,7 @@ const Auth = () => {
                   <Label htmlFor="login-password">Senha</Label>
                   <Input id="login-password" name="password" type="password" placeholder="••••••••" required />
                 </div>
+                <Label htmlFor="login-password">Utilize o Nº de Telefone informado na hora da compra no campo de senha. Após o primeiro acesso altere sua senha.</Label>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
