@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car } from "lucide-react";
+import { Car, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { z } from "zod";
 import type { Plan } from "@/types";
 import { formatCurrency } from "@/lib/formatters";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -214,6 +215,12 @@ const Auth = () => {
                   <Label htmlFor="login-password">Senha</Label>
                   <Input id="login-password" name="password" type="password" placeholder="••••••••" required />
                 </div>
+                <Alert className="bg-primary/5 border-primary/20">
+                  <Info className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm text-muted-foreground ml-2">
+                    Para seu primeiro acesso utilize o Número de Telefone informado na hora da compra no campo de senha. Após o login recomendamos alterar a senha.
+                  </AlertDescription>
+                </Alert>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Entrando..." : "Entrar"}
                 </Button>
