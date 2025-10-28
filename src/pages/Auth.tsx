@@ -218,7 +218,8 @@ const Auth = () => {
                 <Alert className="bg-primary/5 border-primary/20">
                   <Info className="h-4 w-4 text-primary" />
                   <AlertDescription className="text-sm text-muted-foreground ml-2">
-                    Para seu primeiro acesso utilize o Número de Telefone informado na hora da compra no campo de senha. Após o login recomendamos alterar a senha.
+                    Para seu primeiro acesso utilize o Número de Telefone informado na hora da compra no campo de senha
+                    (ex: 55169977XXXX). Após o login recomendamos alterar a senha.
                   </AlertDescription>
                 </Alert>
                 <Button type="submit" className="w-full" disabled={isLoading}>
